@@ -99,16 +99,27 @@ export class ToolParser {
       
       // 次の検索位置を更新
       const closePattern = '</tool_use>';
-      const closeIndex = currentContent.indexOf(closePattern, jsonEnd);
-      lastIndex = closeIndex !== -1 ? closeIndex + closePattern.length : jsonEnd;
+      let closeIndex = currentContent.indexOf(closePattern, jsonEnd);
+      
+      // </tool_use>が見つからない場合、次の<tool_use>または文字列の終端までを探す
+      if (closeIndex === -1) {
+        const nextToolStart = currentContent.indexOf('<tool_use>', jsonEnd);
+        if (nextToolStart !== -1) {
+          closeIndex = nextToolStart;
+        } else {
+          closeIndex = currentContent.length;
+        }
+      } else {
+        closeIndex = closeIndex + closePattern.length;
+      }
+      
+      lastIndex = closeIndex;
     }
     
     // ツール呼び出しを除いたコンテンツ
     let contentWithoutTools = content;
-    for (const toolCall of toolCalls) {
-      const toolPattern = new RegExp(`<tool_use>${toolCall.name}\\s*{[^<]*}?(?:</tool_use>)?`, 'g');
-      contentWithoutTools = contentWithoutTools.replace(toolPattern, '');
-    }
+    // <tool_use>から</tool_use>まで、または次の<tool_use>までを削除
+    contentWithoutTools = contentWithoutTools.replace(/<tool_use>[^<]*?(?:<\/tool_use>|(?=<tool_use>)|$)/g, '').trim();
     
     return { toolCalls, contentWithoutTools: contentWithoutTools.trim() };
   }
