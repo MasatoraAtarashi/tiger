@@ -2,10 +2,12 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 import { Tool, ToolSchema } from './types.js';
+import { ToolError, ErrorCode } from '../errors/index.js';
 
 interface GrepParams {
   pattern: string;
   path?: string;
+  directory?: string; // alias for path for backward compatibility
   recursive?: boolean;
   ignoreCase?: boolean;
   showLineNumbers?: boolean;
@@ -114,7 +116,13 @@ export class GrepTool implements Tool<GrepParams, GrepResult> {
         filesSearched,
       };
     } catch (error) {
-      throw new Error(`Grep error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new ToolError(
+        ErrorCode.TOOL_EXECUTION_FAILED,
+        `Grep error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'grep',
+        { pattern: params.pattern, path: params.path },
+        error as Error
+      );
     }
   }
 

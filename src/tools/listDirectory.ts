@@ -2,9 +2,11 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 import { Tool, ToolSchema } from './types.js';
+import { FileSystemError, ErrorCode } from '../errors/index.js';
 
 interface ListDirectoryParams {
   directoryPath: string;
+  path?: string; // alias for directoryPath for backward compatibility
   showHidden?: boolean;
   recursive?: boolean;
   maxDepth?: number;
@@ -70,13 +72,18 @@ export class ListDirectoryTool implements Tool<ListDirectoryParams, ListDirector
   }
 
   async *execute(params: ListDirectoryParams): AsyncGenerator<ListDirectoryResult, void, unknown> {
+    const directoryPath = params.directoryPath || params.path || '.';
     try {
-      const absolutePath = path.resolve(params.directoryPath);
+      const absolutePath = path.resolve(directoryPath);
       
       // ディレクトリの存在確認
       const stats = await fs.stat(absolutePath);
       if (!stats.isDirectory()) {
-        throw new Error(`Path is not a directory: ${absolutePath}`);
+        throw new FileSystemError(
+          ErrorCode.DIRECTORY_NOT_FOUND,
+          `Path is not a directory: ${absolutePath}`,
+          absolutePath
+        );
       }
 
       const files: FileInfo[] = [];
@@ -96,10 +103,28 @@ export class ListDirectoryTool implements Tool<ListDirectoryParams, ListDirector
         totalCount: files.length,
       };
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(`Failed to list directory: ${error.message}`);
+      if (error instanceof FileSystemError) {
+        throw error;
+      } else if (error instanceof Error && error.message.includes('ENOENT')) {
+        throw new FileSystemError(
+          ErrorCode.DIRECTORY_NOT_FOUND,
+          `Directory not found: ${directoryPath}`,
+          directoryPath
+        );
+      } else if (error instanceof Error && error.message.includes('EACCES')) {
+        throw new FileSystemError(
+          ErrorCode.FILE_ACCESS_DENIED,
+          `Permission denied: ${directoryPath}`,
+          directoryPath
+        );
       }
-      throw new Error('Failed to list directory: Unknown error');
+      throw new FileSystemError(
+        ErrorCode.FILE_ACCESS_DENIED,
+        `Failed to list directory: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        directoryPath,
+        undefined,
+        error as Error
+      );
     }
   }
 

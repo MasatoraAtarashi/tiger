@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 import { Tool, ToolSchema } from './types.js';
+import { FileSystemError, ErrorCode } from '../errors/index.js';
 
 interface EditFileParams {
   filePath: string;
@@ -111,10 +112,26 @@ export class EditFileTool implements Tool<EditFileParams, EditFileResult> {
         preview,
       };
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(`Failed to edit file: ${error.message}`);
+      if (error instanceof Error && error.message.includes('ENOENT')) {
+        throw new FileSystemError(
+          ErrorCode.FILE_NOT_FOUND,
+          `File not found: ${params.filePath}`,
+          params.filePath
+        );
+      } else if (error instanceof Error && error.message.includes('EACCES')) {
+        throw new FileSystemError(
+          ErrorCode.FILE_ACCESS_DENIED,
+          `Permission denied: ${params.filePath}`,
+          params.filePath
+        );
       }
-      throw new Error('Failed to edit file: Unknown error');
+      throw new FileSystemError(
+        ErrorCode.FILE_ACCESS_DENIED,
+        `Failed to edit file: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        params.filePath,
+        undefined,
+        error as Error
+      );
     }
   }
 

@@ -89,9 +89,12 @@ export class ToolParser {
         const args = JSON.parse(fixedArgs) as Record<string, unknown>;
         toolCalls.push({ name: toolName, args });
       } catch (error) {
-        // より詳細なエラー情報を提供
-        console.error(`Failed to parse tool call for ${toolName}:`, error instanceof Error ? error.message : error);
-        console.error('Raw args string:', argsStr);
+        // デバッグモードの場合のみエラーを表示
+        if (process.env['TIGER_DEBUG'] === 'true') {
+          console.error(`Failed to parse tool call for ${toolName}:`, error instanceof Error ? error.message : error);
+          console.error('Raw args string:', argsStr);
+        }
+        // パースエラーは無視して続行（ストリーミング中の不完全なJSONの可能性があるため）
       }
       
       // 次の検索位置を更新

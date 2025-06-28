@@ -3,22 +3,17 @@ import { homedir } from 'os';
 import path from 'path';
 
 import { TigerConfig } from './types.js';
+import { DEFAULT_SYSTEM_PROMPT, DEFAULT_ENABLED_TOOLS } from './constants.js';
 
 const DEFAULT_CONFIG: TigerConfig = {
   llm: {
     type: 'ollama',
     baseUrl: 'http://localhost:11434',
-    defaultModel: 'llama3',
+    defaultModel: 'gemma3:4b',
   },
   temperature: 0.7,
-  systemPrompt: `You are Tiger, a helpful coding assistant powered by a local LLM.
-
-You have access to the following tools:
-
-1. read_file - Read the contents of a file from the local filesystem
-   Usage: <tool_use>read_file {"filePath": "path/to/file"}</tool_use>
-
-When you need to use a tool, format your response with the tool invocation. You can include explanatory text before or after the tool use.`,
+  systemPrompt: DEFAULT_SYSTEM_PROMPT,
+  enabledTools: DEFAULT_ENABLED_TOOLS,
   options: {
     streamByDefault: true,
     debug: false,
@@ -72,6 +67,9 @@ export class ConfigLoader {
         return this.config;
       } catch (error) {
         // ファイルが存在しない場合は次を試す
+        if (error instanceof Error && !error.message.includes('ENOENT')) {
+          console.warn(`Error loading config from ${configPath}:`, error.message);
+        }
         continue;
       }
     }
@@ -100,6 +98,10 @@ export class ConfigLoader {
     if (!mergedConfig.defaultModel && mergedConfig.llm.defaultModel) {
       mergedConfig.defaultModel = mergedConfig.llm.defaultModel;
     }
+
+    // ユーザー設定でenabledToolsやsystemPromptが指定されていても、内部のデフォルト値を使用
+    mergedConfig.enabledTools = DEFAULT_ENABLED_TOOLS;
+    mergedConfig.systemPrompt = DEFAULT_SYSTEM_PROMPT;
 
     return mergedConfig;
   }

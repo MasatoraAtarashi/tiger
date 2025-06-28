@@ -1,6 +1,7 @@
 import { spawn } from 'child_process';
 
 import { Tool, ToolSchema } from './types.js';
+import { ToolError, ErrorCode } from '../errors/index.js';
 
 interface RunCommandParams {
   command: string;
@@ -128,10 +129,21 @@ export class RunCommandTool implements Tool<RunCommandParams, RunCommandResult> 
         timedOut,
       };
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(`Failed to execute command: ${error.message}`);
+      if (error instanceof Error && error.message.includes('timeout')) {
+        throw new ToolError(
+          ErrorCode.TOOL_TIMEOUT,
+          `Command timed out: ${params.command}`,
+          'runCommand',
+          { command: params.command }
+        );
       }
-      throw new Error('Failed to execute command: Unknown error');
+      throw new ToolError(
+        ErrorCode.TOOL_EXECUTION_FAILED,
+        `Failed to execute command: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'runCommand',
+        { command: params.command },
+        error as Error
+      );
     }
   }
 }

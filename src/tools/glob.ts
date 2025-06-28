@@ -2,6 +2,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 
 import { Tool, ToolSchema } from './types.js';
+import { ToolError, ErrorCode } from '../errors/index.js';
 
 interface GlobParams {
   pattern: string;
@@ -100,7 +101,13 @@ export class GlobTool implements Tool<GlobParams, GlobResult> {
         totalMatches: matches.length,
       };
     } catch (error) {
-      throw new Error(`Glob error: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new ToolError(
+        ErrorCode.TOOL_EXECUTION_FAILED,
+        `Glob error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'glob',
+        { pattern: params.pattern, basePath },
+        error as Error
+      );
     }
   }
 
