@@ -12,13 +12,32 @@ const TigerLogo: React.FC = () => (
   </Gradient>
 );
 
-const main = (): void => {
-  const { clear } = render(<TigerLogo />);
+const parseArgs = (): { debug: boolean; skipLogo: boolean } => {
+  const args = process.argv.slice(2);
+  return {
+    debug: args.includes('--debug') || args.includes('-d'),
+    skipLogo: args.includes('--no-logo'),
+  };
+};
 
-  setTimeout(() => {
-    clear();
+const main = (): void => {
+  const { debug, skipLogo } = parseArgs();
+
+  // デバッグモードの設定
+  if (debug) {
+    process.env['TIGER_DEBUG'] = 'true';
+  }
+
+  if (skipLogo) {
     render(<ChatApp />);
-  }, 1500);
+  } else {
+    const { clear } = render(<TigerLogo />);
+
+    setTimeout(() => {
+      clear();
+      render(<ChatApp />);
+    }, 1500);
+  }
 };
 
 main();

@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { LLMProvider, LLMMessage, StreamEvent, ToolCall } from '../llm/types.js';
 import { Tool } from '../tools/types.js';
 import { Message } from '../types.js';
+import { Logger } from '../utils/logger.js';
 
 interface ChatOptions {
   provider: LLMProvider;
@@ -20,6 +21,7 @@ export class Chat {
   private maxTokens?: number;
   private messages: LLMMessage[] = [];
   private tools: Map<string, Tool> = new Map();
+  private logger = Logger.getInstance();
 
   constructor(options: ChatOptions) {
     this.provider = options.provider;
@@ -39,6 +41,7 @@ export class Chat {
   // ツールを登録
   registerTool(tool: Tool): void {
     this.tools.set(tool.schema.name, tool);
+    this.logger.debug('Chat', 'Registered tool', { toolName: tool.schema.name });
   }
 
   // ユーザーメッセージを追加
@@ -246,6 +249,11 @@ export class Chat {
       }
 
       try {
+        this.logger.debug('Chat', 'Executing tool', {
+          toolName: toolCall.name,
+          arguments: toolCall.arguments,
+        });
+
         // ツール実行
         const executeResult = tool.execute(toolCall.arguments);
         const data: unknown[] = [];
@@ -257,6 +265,11 @@ export class Chat {
         results.push({
           toolCallId: toolCall.id,
           data: data.length === 1 ? data[0] : data,
+        });
+
+        this.logger.debug('Chat', 'Tool execution completed', {
+          toolName: toolCall.name,
+          resultCount: data.length,
         });
       } catch (error) {
         results.push({

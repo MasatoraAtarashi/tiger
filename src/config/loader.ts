@@ -36,6 +36,14 @@ export class ConfigLoader {
       return this.config;
     }
 
+    // 環境変数からデバッグモードを設定
+    if (process.env['TIGER_DEBUG'] === 'true') {
+      DEFAULT_CONFIG.options = {
+        ...DEFAULT_CONFIG.options,
+        debug: true,
+      };
+    }
+
     // 設定ファイルの検索優先順位
     const configPaths = [
       path.join(process.cwd(), '.tigerrc.json'),

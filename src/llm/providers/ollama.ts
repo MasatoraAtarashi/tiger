@@ -1,3 +1,4 @@
+import { Logger } from '../../utils/logger.js';
 import {
   ChatCompletionOptions,
   ChatCompletionResponse,
@@ -43,12 +44,15 @@ interface OllamaStreamResponse {
 export class OllamaProvider implements LLMProvider {
   name = 'ollama';
   private config: OllamaConfig;
+  private logger = Logger.getInstance();
 
   constructor(config: Partial<OllamaConfig> = {}) {
     this.config = {
       baseUrl: config.baseUrl || 'http://localhost:11434',
       defaultModel: config.defaultModel || 'llama3',
     };
+
+    this.logger.debug('OllamaProvider', 'Initialized', { config: this.config });
   }
 
   async listModels(): Promise<string[]> {
@@ -68,6 +72,14 @@ export class OllamaProvider implements LLMProvider {
   }
 
   async chatCompletion(options: ChatCompletionOptions): Promise<ChatCompletionResponse> {
+    const startTime = Date.now();
+    this.logger.debug('OllamaProvider', 'Chat completion request', {
+      model: options.model || this.config.defaultModel,
+      messageCount: options.messages.length,
+      temperature: options.temperature,
+      hasTools: !!options.tools,
+    });
+
     const messages = this.convertMessages(options.messages);
     const tools = options.tools?.map((tool) => ({
       type: 'function',
@@ -120,7 +132,7 @@ export class OllamaProvider implements LLMProvider {
       arguments: JSON.parse(tc.function.arguments) as Record<string, unknown>,
     }));
 
-    return {
+    const response_result = {
       content: data.message?.content || '',
       toolCalls,
       usage: {
@@ -129,6 +141,14 @@ export class OllamaProvider implements LLMProvider {
         totalTokens: (data.prompt_eval_count || 0) + (data.eval_count || 0),
       },
     };
+
+    this.logger.debug('OllamaProvider', 'Chat completion response', {
+      duration: Date.now() - startTime,
+      tokenCount: response_result.usage.totalTokens,
+      hasToolCalls: !!toolCalls && toolCalls.length > 0,
+    });
+
+    return response_result;
   }
 
   async *streamChatCompletion(

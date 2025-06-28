@@ -2,13 +2,14 @@ import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
 import React, { useEffect } from 'react';
 
+import { DebugInfo } from './components/DebugInfo.js';
 import { InputArea } from './components/InputArea.js';
 import { MessageList } from './components/MessageList.js';
 import { useChat } from './hooks/useChat.js';
 
 export const ChatApp: React.FC = () => {
   const { exit } = useApp();
-  const { session, sendMessage, isConnected } = useChat();
+  const { session, sendMessage, isConnected, debugInfo } = useChat();
 
   useEffect(() => {
     // Ctrl+C または Ctrl+D で終了
@@ -63,6 +64,8 @@ export const ChatApp: React.FC = () => {
           <InputArea onSubmit={handleSubmit} isProcessing={session.isProcessing} />
         )}
       </Box>
+
+      {debugInfo && <DebugInfo info={debugInfo} />}
     </Box>
   );
 };
