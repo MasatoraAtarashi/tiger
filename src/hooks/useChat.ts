@@ -71,7 +71,7 @@ export const useChat = (): {
 
         const chat = new Chat({
           provider,
-          model: config.defaultModel,
+          model: config.defaultModel || config.llm.defaultModel,
           systemPrompt: config.systemPrompt,
           temperature: config.temperature,
           maxTokens: config.maxTokens,
@@ -246,6 +246,11 @@ export const useChat = (): {
         }));
       }
     } catch (error) {
+      logger.error('useChat', 'Error sending message', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+      });
+      
       const errorMessage: Message = {
         id: uuidv4(),
         role: 'system',

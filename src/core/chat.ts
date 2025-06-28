@@ -27,7 +27,7 @@ export class Chat {
 
   constructor(options: ChatOptions) {
     this.provider = options.provider;
-    this.model = options.model || 'llama3';
+    this.model = options.model || 'gemma3:4b';
     this.systemPrompt =
       options.systemPrompt || 'You are Tiger, a helpful coding assistant powered by a local LLM.';
     this.temperature = options.temperature ?? 0.7;
@@ -224,7 +224,7 @@ export class Chat {
                 content: contentWithoutTools || content,
               });
             }
-            yield event;
+            // doneイベントは既にyieldされているので、ここでは送信しない
             break;
           }
         } else {

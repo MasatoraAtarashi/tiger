@@ -228,15 +228,25 @@ export class OllamaProvider implements LLMProvider {
             try {
               const data = JSON.parse(line) as OllamaStreamResponse;
               
-              if (messageCount % 10 === 0) {
-                this.logger.debug('OllamaProvider', 'Stream progress', {
+              // Log first few messages for debugging
+              if (messageCount <= 5 || messageCount % 10 === 0) {
+                this.logger.debug('OllamaProvider', 'Stream data', {
                   messageCount,
-                  done: data.done,
+                  data: JSON.stringify(data),
                 });
               }
 
               if (data.message?.content) {
+                this.logger.debug('OllamaProvider', 'Content received', {
+                  content: data.message.content,
+                  messageRole: data.message.role,
+                });
                 yield { type: 'content', content: data.message.content };
+              } else if (data.message) {
+                this.logger.debug('OllamaProvider', 'Message without content', {
+                  message: data.message,
+                  done: data.done,
+                });
               }
 
               if (data.message?.tool_calls) {

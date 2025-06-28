@@ -83,7 +83,7 @@ export class ConfigLoader {
 
   // 設定をマージ（深いマージ）
   private mergeConfig(defaultConfig: TigerConfig, userConfig: Partial<TigerConfig>): TigerConfig {
-    return {
+    const mergedConfig = {
       ...defaultConfig,
       ...userConfig,
       llm: {
@@ -95,6 +95,13 @@ export class ConfigLoader {
         ...userConfig.options,
       },
     };
+
+    // llm.defaultModelをconfig.defaultModelに設定（後方互換性）
+    if (!mergedConfig.defaultModel && mergedConfig.llm.defaultModel) {
+      mergedConfig.defaultModel = mergedConfig.llm.defaultModel;
+    }
+
+    return mergedConfig;
   }
 
   // 設定をリロード
