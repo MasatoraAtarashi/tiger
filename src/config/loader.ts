@@ -2,8 +2,8 @@ import { promises as fs } from 'fs';
 import { homedir } from 'os';
 import path from 'path';
 
-import { TigerConfig } from './types.js';
 import { DEFAULT_SYSTEM_PROMPT, DEFAULT_ENABLED_TOOLS } from './constants.js';
+import { TigerConfig } from './types.js';
 
 const DEFAULT_CONFIG: TigerConfig = {
   llm: {

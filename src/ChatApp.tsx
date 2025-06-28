@@ -2,12 +2,12 @@ import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
 import React, { useEffect, useMemo } from 'react';
 
-import { ConfirmationDialog } from './components/ConfirmationDialog.js';
+import { ConfirmDialog } from './components/ConfirmDialog.js';
 import { DebugInfo } from './components/DebugInfo.js';
-import { StatusBar } from './components/GameUI.js';
 import { InputArea } from './components/InputArea.js';
 import { Layout } from './components/Layout.js';
 import { MessageList } from './components/MessageList.js';
+import { StatusBar } from './components/StatusBar.js';
 import { TaskStatus } from './components/TaskStatus.js';
 import { useChat } from './hooks/useChat.js';
 // import { useTerminalSize } from './hooks/useTerminalSize.js';
@@ -97,7 +97,7 @@ export const ChatApp: React.FC = () => {
 
       <Box>
         {pendingConfirmation ? (
-          <ConfirmationDialog
+          <ConfirmDialog
             message={pendingConfirmation.message}
             onConfirm={() => handleConfirmation(true)}
             onCancel={() => handleConfirmation(false)}

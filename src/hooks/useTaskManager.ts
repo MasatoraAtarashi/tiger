@@ -41,7 +41,7 @@ export const useTaskManager = (): TaskManager => {
   const parseAndAddTasks = useCallback((content: string) => {
     // LLMのレスポンスからタスクリストを抽出
     const taskPatterns = [
-      /(?:^|\n)\s*(?:\d+\.|\-|\*)\s+(.+)/gm,  // 1. タスク, - タスク, * タスク
+      /(?:^|\n)\s*(?:\d+\.|[-*])\s+(.+)/gm,  // 1. タスク, - タスク, * タスク
       /(?:^|\n)\s*\[[ x]\]\s+(.+)/gm,         // [ ] タスク, [x] タスク
       /(?:^|\n)\s*タスク\d+[:：]\s*(.+)/gm,    // タスク1: 説明
     ];

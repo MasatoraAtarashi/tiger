@@ -1,7 +1,8 @@
 import { spawn } from 'child_process';
 
-import { Tool, ToolSchema } from './types.js';
 import { ToolError, ErrorCode } from '../errors/index.js';
+
+import { Tool, ToolSchema } from './types.js';
 
 interface RunCommandParams {
   command: string;
