@@ -24,10 +24,11 @@ const main = (): void => {
   if (skipLogo) {
     render(<ChatApp />);
   } else {
-    const { clear } = render(<TigerLogo />);
+    const { unmount } = render(<TigerLogo />);
 
     setTimeout(() => {
-      clear();
+      unmount();
+      process.stdout.write('\x1Bc'); // Clear screen
       render(<ChatApp />);
     }, 1500);
   }

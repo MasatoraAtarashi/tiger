@@ -10,7 +10,11 @@ export class ToolParser {
     contentWithoutTools: string;
   } {
     const toolCalls: ParsedToolCall[] = [];
-    const currentContent = content;
+    
+    // コードブロック形式のツール呼び出しを標準形式に変換
+    const convertedContent = content.replace(/```tool_use\s*\n\s*(\w+)\s+({[^`]*})\s*\n```/g, '<tool_use>$1 $2</tool_use>');
+    
+    const currentContent = convertedContent;
     let lastIndex = 0;
     
     // eslint-disable-next-line no-constant-condition
@@ -117,9 +121,11 @@ export class ToolParser {
     }
     
     // ツール呼び出しを除いたコンテンツ
-    let contentWithoutTools = content;
+    let contentWithoutTools = convertedContent;
     // <tool_use>から</tool_use>まで、または次の<tool_use>までを削除
     contentWithoutTools = contentWithoutTools.replace(/<tool_use>[^<]*?(?:<\/tool_use>|(?=<tool_use>)|$)/g, '').trim();
+    // コードブロック形式も削除
+    contentWithoutTools = contentWithoutTools.replace(/```tool_use\s*\n\s*\w+\s+{[^`]*}\s*\n```/g, '').trim();
     
     return { toolCalls, contentWithoutTools: contentWithoutTools.trim() };
   }

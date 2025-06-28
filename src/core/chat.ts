@@ -52,6 +52,7 @@ export class Chat {
   registerTool(tool: Tool): void {
     this.tools.set(tool.schema.name, tool);
     this.logger.debug('Chat', 'Registered tool', { toolName: tool.schema.name });
+    console.log('[Chat] Registered tool:', tool.schema.name);
   }
 
   // ユーザーメッセージを追加
@@ -198,8 +199,10 @@ export class Chat {
           yield event;
         } else if (event.type === 'done') {
           this.logger.debug('Chat', `Stream complete. Content: ${content}`);
+          console.log('[Chat] LLM Response:', content.substring(0, 500));
           // LLMの応答からツール呼び出しをパース
           const { toolCalls, contentWithoutTools } = ToolParser.parseToolCalls(content);
+          console.log('[Chat] Parsed tool calls:', toolCalls);
           
           if (toolCalls.length > 0) {
             // アシスタントのレスポンスを追加（ツール呼び出し前のテキスト）
@@ -210,10 +213,12 @@ export class Chat {
             
             // ツールを実行
             for (const toolCall of toolCalls) {
+              console.log('[Chat] Looking for tool:', toolCall.name);
               const tool = this.tools.get(toolCall.name);
               if (tool) {
                 try {
                   this.logger.debug('Chat', `Executing tool: ${toolCall.name}`, toolCall.args);
+                  console.log('[Chat] Executing tool:', toolCall.name, 'with args:', toolCall.args);
                   
                   // 確認が必要かチェック
                   if (tool.shouldConfirmExecute && tool.shouldConfirmExecute(toolCall.args)) {
@@ -272,6 +277,8 @@ export class Chat {
                 }
               } else {
                 const errorMsg = `Tool not found: ${toolCall.name}`;
+                console.log('[Chat] Tool not found:', toolCall.name);
+                console.log('[Chat] Available tools:', Array.from(this.tools.keys()));
                 this.messages.push({
                   role: 'user',
                   content: errorMsg,
