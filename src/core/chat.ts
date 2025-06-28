@@ -164,6 +164,7 @@ export class Chat {
           content += event.content;
           yield event;
         } else if (event.type === 'done') {
+          this.logger.debug('Chat', `Stream complete. Content: ${content}`);
           // LLMの応答からツール呼び出しをパース
           const { toolCalls, contentWithoutTools } = ToolParser.parseToolCalls(content);
           
@@ -217,10 +218,12 @@ export class Chat {
             continue;
           } else {
             // ツール呼び出しがない場合は終了
-            this.messages.push({
-              role: 'assistant',
-              content: contentWithoutTools || content,
-            });
+            if (content.trim()) {
+              this.messages.push({
+                role: 'assistant',
+                content: contentWithoutTools || content,
+              });
+            }
             yield event;
             break;
           }

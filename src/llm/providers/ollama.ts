@@ -46,6 +46,7 @@ export class OllamaProvider implements LLMProvider {
   name = 'ollama';
   private config: OllamaConfig;
   private logger = Logger.getInstance();
+  // private timeout = 30000; // 30秒のタイムアウト
   private readonly DEFAULT_TIMEOUT = 30000; // 30秒のデフォルトタイムアウト
 
   constructor(config: Partial<OllamaConfig> = {}) {
@@ -281,7 +282,7 @@ export class OllamaProvider implements LLMProvider {
 
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await this.fetchWithTimeout(`${this.config.baseUrl}/api/version`);
+      const response = await fetch(`${this.config.baseUrl}/api/version`);
       return response.ok;
     } catch {
       return false;

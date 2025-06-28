@@ -95,6 +95,8 @@ export const useChat = (): {
             provider: config.llm.type,
             model: config.defaultModel || config.llm.defaultModel || 'llama3',
           });
+        } else {
+          setDebugInfo(undefined);
         }
       } catch (error) {
         console.error('Failed to initialize chat:', error);
@@ -174,10 +176,11 @@ export const useChat = (): {
         let streamContent = '';
 
         for await (const event of chatRef.current.streamComplete()) {
-          logger.debug('useChat', `Received event: ${event.type}`);
+          logger.debug('useChat', `Received event: ${event.type}`, event);
           
           if (event.type === 'content') {
             streamContent += event.content;
+            logger.debug('useChat', `Stream content updated: ${streamContent.length} chars`);
             // ストリーミング中のメッセージを更新
             setSession((prev) => {
               const messages = [...prev.messages];
@@ -202,10 +205,11 @@ export const useChat = (): {
             });
           } else if (event.type === 'done') {
             // ストリーミング完了
+            logger.debug('useChat', `Stream complete. Total content: ${streamContent}`);
             const finalMessage: Message = {
               id: uuidv4(),
               role: 'assistant',
-              content: streamContent,
+              content: streamContent || '[No response from LLM]',
               timestamp: new Date(),
             };
             

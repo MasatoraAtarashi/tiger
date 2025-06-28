@@ -3,6 +3,7 @@ import Spinner from 'ink-spinner';
 import React, { useEffect } from 'react';
 
 import { DebugInfo } from './components/DebugInfo.js';
+import { GameUI, StatusBar } from './components/GameUI.js';
 import { InputArea } from './components/InputArea.js';
 import { MessageList } from './components/MessageList.js';
 import { useChat } from './hooks/useChat.js';
@@ -34,38 +35,52 @@ export const ChatApp: React.FC = () => {
     void sendMessage(message);
   };
 
+  // ツール使用回数をカウント
+  const toolsUsedCount = session.messages.filter((msg) => 
+    msg.content.includes('<tool_use>') || msg.content.includes('<tool_result>')
+  ).length;
+
   return (
-    <Box flexDirection="column" padding={1}>
-      <Box marginBottom={1}>
-        <Text bold color="yellow">
-          Tiger CLI - Local LLM-powered coding agent
-        </Text>
-      </Box>
+    <GameUI 
+      title="TIGER CONSOLE v1.0"
+      statusBar={
+        <StatusBar 
+          isProcessing={session.isProcessing}
+          messageCount={session.messages.length}
+          toolsUsed={toolsUsedCount}
+        />
+      }
+    >
+      <Box flexDirection="column" flexGrow={1}>
+        <Box marginBottom={1}>
+          <Text dimColor>
+            {isConnected ? '⚡ Type your message or use /exit to quit' : '🔄 Connecting to Ollama...'}
+          </Text>
+        </Box>
 
-      <Box marginBottom={1}>
-        <Text dimColor>
-          {isConnected ? 'Type your message or use /exit to quit' : 'Connecting to Ollama...'}
-        </Text>
-      </Box>
+        <Box flexDirection="column" flexGrow={1} marginBottom={1}>
+          <MessageList messages={session.messages} />
+        </Box>
 
-      <Box flexDirection="column" marginBottom={1}>
-        <MessageList messages={session.messages} />
-      </Box>
+        <Box>
+          {session.isProcessing ? (
+            <Box>
+              <Text color="yellow">
+                <Spinner type="dots" />
+              </Text>
+              <Text color="yellow"> Tiger is hunting for answers...</Text>
+            </Box>
+          ) : (
+            <InputArea onSubmit={handleSubmit} isProcessing={session.isProcessing} />
+          )}
+        </Box>
 
-      <Box>
-        {session.isProcessing ? (
-          <Box>
-            <Text color="green">
-              <Spinner type="dots" />
-            </Text>
-            <Text> Tiger is thinking...</Text>
+        {debugInfo && (
+          <Box marginTop={1}>
+            <DebugInfo info={debugInfo} />
           </Box>
-        ) : (
-          <InputArea onSubmit={handleSubmit} isProcessing={session.isProcessing} />
         )}
       </Box>
-
-      {debugInfo && <DebugInfo info={debugInfo} />}
-    </Box>
+    </GameUI>
   );
 };
