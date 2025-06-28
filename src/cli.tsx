@@ -7,9 +7,12 @@ import React from 'react';
 import { ChatApp } from './ChatApp.js';
 
 const TigerLogo: React.FC = () => (
-  <Gradient colors={['#FF6B00', '#FFD93D', '#FF6B00']}>
-    <BigText text="TIGER" align="center" font="chrome" />
-  </Gradient>
+  <>
+    <BigText text="" />  {/* スペース用 */}
+    <Gradient colors={['#FF6B00', '#FFD93D', '#FF6B00']}>
+      <BigText text="TIGER" align="center" font="chrome" />
+    </Gradient>
+  </>
 );
 
 const parseArgs = (): { debug: boolean; skipLogo: boolean } => {

@@ -1,5 +1,9 @@
+import { EditFileTool } from './editFile.js';
+import { ListDirectoryTool } from './listDirectory.js';
 import { ReadFileTool } from './readFile.js';
+import { RunCommandTool } from './runCommand.js';
 import { Tool, ToolRegistry, ToolSchema } from './types.js';
+import { WriteFileTool } from './writeFile.js';
 
 export class DefaultToolRegistry implements ToolRegistry {
   private tools: Map<string, Tool> = new Map();
@@ -7,6 +11,10 @@ export class DefaultToolRegistry implements ToolRegistry {
   constructor() {
     // デフォルトツールの登録
     this.register(new ReadFileTool());
+    this.register(new WriteFileTool());
+    this.register(new EditFileTool());
+    this.register(new ListDirectoryTool());
+    this.register(new RunCommandTool());
   }
 
   register(tool: Tool): void {

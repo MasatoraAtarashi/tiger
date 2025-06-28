@@ -5,7 +5,7 @@ import { ConfigLoader } from '../config/loader.js';
 import { TigerConfig } from '../config/types.js';
 import { Chat } from '../core/chat.js';
 import { LLMProviderFactory } from '../llm/factory.js';
-import { ReadFileTool } from '../tools/readFile.js';
+import { toolRegistry } from '../tools/registry.js';
 import { Message, ChatSession } from '../types.js';
 import { Logger } from '../utils/logger.js';
 
@@ -78,7 +78,13 @@ export const useChat = (): {
         });
 
         // ツールを登録
-        chat.registerTool(new ReadFileTool());
+        const tools = toolRegistry.list();
+        for (const toolSchema of tools) {
+          const tool = toolRegistry.get(toolSchema.name);
+          if (tool) {
+            chat.registerTool(tool);
+          }
+        }
 
         chatRef.current = chat;
         setIsConnected(true);
