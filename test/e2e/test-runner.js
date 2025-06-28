@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 import { spawn } from 'child_process';
-import { readFile, unlink, existsSync } from 'fs/promises';
+import { readFile, unlink } from 'fs/promises';
+import { existsSync } from 'fs';
 import { join } from 'path';
 
 // ANSI color codes
