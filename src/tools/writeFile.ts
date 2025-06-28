@@ -57,6 +57,13 @@ export class WriteFileTool implements Tool<WriteFileParams, WriteFileResult> {
     return true;
   }
 
+  getConfirmationMessage(params: WriteFileParams): string {
+    const preview = params.content.length > 100 
+      ? params.content.substring(0, 100) + '...' 
+      : params.content;
+    return `ファイル "${params.filePath}" を作成/上書きします。\n\n内容のプレビュー:\n${preview}`;
+  }
+
   async *execute(params: WriteFileParams): AsyncGenerator<WriteFileResult, void, unknown> {
     try {
       const absolutePath = path.resolve(params.filePath);

@@ -22,6 +22,9 @@ export interface Tool<TParams = unknown, TResult = unknown> {
   // ユーザーに実行確認が必要かどうか
   shouldConfirmExecute(params: TParams): boolean;
 
+  // 確認メッセージをカスタマイズ（オプショナル）
+  getConfirmationMessage?(params: TParams): string;
+
   // ツールの実行
   execute(params: TParams): AsyncGenerator<TResult, void, unknown>;
 }

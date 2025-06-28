@@ -4,6 +4,7 @@ import { v4 as uuidv4 } from 'uuid';
 import { ConfigLoader } from '../config/loader.js';
 import { TigerConfig } from '../config/types.js';
 import { Chat } from '../core/chat.js';
+import { confirmationManager } from '../core/confirmation-manager.js';
 import { LLMProviderFactory } from '../llm/factory.js';
 import { toolRegistry } from '../tools/registry.js';
 import { Message, ChatSession } from '../types.js';
@@ -33,6 +34,12 @@ export const useChat = (): {
   isConnected: boolean;
   debugInfo?: DebugInfo;
   taskManager: ReturnType<typeof useTaskManager>;
+  pendingConfirmation: {
+    tool: string;
+    message: string;
+    args: Record<string, unknown>;
+  } | null;
+  handleConfirmation: (approved: boolean) => void;
 } => {
   const [session, setSession] = useState<ChatSession>({
     messages: [],
@@ -44,6 +51,11 @@ export const useChat = (): {
   const configRef = useRef<TigerConfig | null>(null);
   const logger = Logger.getInstance();
   const taskManager = useTaskManager();
+  const [pendingConfirmation, setPendingConfirmation] = useState<{
+    tool: string;
+    message: string;
+    args: Record<string, unknown>;
+  } | null>(null);
 
   // LLMプロバイダーを初期化
   useEffect(() => {
@@ -293,6 +305,16 @@ export const useChat = (): {
             break; // ループを終了
           } else if (event.type === 'error') {
             throw event.error;
+          } else if ('confirmationRequired' in event && event.type === 'confirmationRequired') {
+            // 確認ダイアログを表示
+            setPendingConfirmation({
+              tool: event.tool,
+              message: event.message,
+              args: event.args
+            });
+            
+            // ストリーミングを一時停止
+            break;
           }
         }
       } else {
@@ -325,5 +347,20 @@ export const useChat = (): {
     }
   }, []);
 
-  return { session, sendMessage, isConnected, debugInfo, taskManager };
+  const handleConfirmation = useCallback((approved: boolean) => {
+    if (confirmationManager.hasPendingConfirmation()) {
+      confirmationManager.respond(approved);
+      setPendingConfirmation(null);
+    }
+  }, []);
+
+  return { 
+    session, 
+    sendMessage, 
+    isConnected, 
+    debugInfo, 
+    taskManager, 
+    pendingConfirmation, 
+    handleConfirmation 
+  };
 };

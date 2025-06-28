@@ -66,6 +66,13 @@ export class EditFileTool implements Tool<EditFileParams, EditFileResult> {
     return true;
   }
 
+  getConfirmationMessage(params: EditFileParams): string {
+    const preview = params.replace.length > 50 
+      ? params.replace.substring(0, 50) + '...' 
+      : params.replace;
+    return `ファイル "${params.filePath}" を編集します。\n\n置換内容: "${params.search}" → "${preview}"`;
+  }
+
   async *execute(params: EditFileParams): AsyncGenerator<EditFileResult, void, unknown> {
     try {
       const absolutePath = path.resolve(params.filePath);

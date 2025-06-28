@@ -5,7 +5,15 @@ import { Tool } from '../tools/types.js';
 import { Message } from '../types.js';
 import { Logger } from '../utils/logger.js';
 
+import { confirmationManager } from './confirmation-manager.js';
 import { ToolParser } from './tool-parser.js';
+
+export type ChatStreamEvent = StreamEvent | {
+  type: 'confirmationRequired';
+  tool: string;
+  message: string;
+  args: Record<string, unknown>;
+};
 
 interface ChatOptions {
   provider: LLMProvider;
@@ -85,6 +93,31 @@ export class Chat {
           if (tool) {
             try {
               this.logger.debug('Chat', `Executing tool: ${toolCall.name}`, toolCall.args);
+              
+              // 確認が必要かチェック
+              if (tool.shouldConfirmExecute && tool.shouldConfirmExecute(toolCall.args)) {
+                const confirmMessage = tool.getConfirmationMessage 
+                  ? tool.getConfirmationMessage(toolCall.args)
+                  : `ツール ${toolCall.name} を実行します。よろしいですか？`;
+                
+                // 確認待ち
+                const approved = await confirmationManager.requestConfirmation({
+                  id: uuidv4(),
+                  tool: toolCall.name,
+                  message: confirmMessage,
+                  params: toolCall.args
+                });
+                
+                if (!approved) {
+                  const cancelMsg = `ツール ${toolCall.name} の実行がキャンセルされました。`;
+                  this.messages.push({
+                    role: 'user',
+                    content: cancelMsg,
+                  });
+                  continue;
+                }
+              }
+              
               const results: unknown[] = [];
               for await (const result of tool.execute(toolCall.args)) {
                 results.push(result);
@@ -140,7 +173,7 @@ export class Chat {
 
   // チャット完了（ストリーミング）
   async *streamComplete(): AsyncGenerator<
-    StreamEvent | { type: 'message'; message: Message },
+    ChatStreamEvent | { type: 'message'; message: Message },
     void,
     unknown
   > {
@@ -181,6 +214,39 @@ export class Chat {
               if (tool) {
                 try {
                   this.logger.debug('Chat', `Executing tool: ${toolCall.name}`, toolCall.args);
+                  
+                  // 確認が必要かチェック
+                  if (tool.shouldConfirmExecute && tool.shouldConfirmExecute(toolCall.args)) {
+                    const confirmMessage = tool.getConfirmationMessage 
+                      ? tool.getConfirmationMessage(toolCall.args)
+                      : `ツール ${toolCall.name} を実行します。よろしいですか？`;
+                    
+                    yield { 
+                      type: 'confirmationRequired' as const, 
+                      tool: toolCall.name,
+                      message: confirmMessage,
+                      args: toolCall.args
+                    };
+                    
+                    // 確認待ち
+                    const approved = await confirmationManager.requestConfirmation({
+                      id: uuidv4(),
+                      tool: toolCall.name,
+                      message: confirmMessage,
+                      params: toolCall.args
+                    });
+                    
+                    if (!approved) {
+                      const cancelMsg = `ツール ${toolCall.name} の実行がキャンセルされました。`;
+                      this.messages.push({
+                        role: 'user',
+                        content: cancelMsg,
+                      });
+                      yield { type: 'content', content: `\n\n${cancelMsg}\n\n` };
+                      continue;
+                    }
+                  }
+                  
                   const results: unknown[] = [];
                   for await (const result of tool.execute(toolCall.args)) {
                     results.push(result);

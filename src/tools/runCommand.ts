@@ -69,6 +69,10 @@ export class RunCommandTool implements Tool<RunCommandParams, RunCommandResult> 
     return !this.safeCommands.includes(baseCommand);
   }
 
+  getConfirmationMessage(params: RunCommandParams): string {
+    return `コマンドを実行します: ${params.command}`;
+  }
+
   async *execute(params: RunCommandParams): AsyncGenerator<RunCommandResult, void, unknown> {
     const stdout: string[] = [];
     const stderr: string[] = [];

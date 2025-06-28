@@ -2,6 +2,7 @@ import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
 import React, { useEffect, useMemo } from 'react';
 
+import { ConfirmationDialog } from './components/ConfirmationDialog.js';
 import { DebugInfo } from './components/DebugInfo.js';
 import { StatusBar } from './components/GameUI.js';
 import { InputArea } from './components/InputArea.js';
@@ -9,10 +10,21 @@ import { Layout } from './components/Layout.js';
 import { MessageList } from './components/MessageList.js';
 import { TaskStatus } from './components/TaskStatus.js';
 import { useChat } from './hooks/useChat.js';
+// import { useTerminalSize } from './hooks/useTerminalSize.js';
 
 export const ChatApp: React.FC = () => {
   const { exit } = useApp();
-  const { session, sendMessage, isConnected, debugInfo, taskManager } = useChat();
+  const { 
+    session, 
+    sendMessage, 
+    isConnected, 
+    debugInfo, 
+    taskManager,
+    pendingConfirmation,
+    handleConfirmation
+  } = useChat();
+  // 後で使用するため一時的にコメントアウト
+  // const { columns: terminalWidth, rows: terminalHeight } = useTerminalSize();
 
   useEffect(() => {
     // Ctrl+C または Ctrl+D で終了
@@ -84,7 +96,13 @@ export const ChatApp: React.FC = () => {
       </Box>
 
       <Box>
-        {session.isProcessing ? (
+        {pendingConfirmation ? (
+          <ConfirmationDialog
+            message={pendingConfirmation.message}
+            onConfirm={() => handleConfirmation(true)}
+            onCancel={() => handleConfirmation(false)}
+          />
+        ) : session.isProcessing ? (
           <Box>
             <Text color="yellow">
               <Spinner type="dots" />
