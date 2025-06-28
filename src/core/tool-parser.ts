@@ -12,7 +12,9 @@ export class ToolParser {
     const toolCalls: ParsedToolCall[] = [];
     
     // コードブロック形式のツール呼び出しを標準形式に変換
-    const convertedContent = content.replace(/```tool_use\s*\n\s*(\w+)\s+({[^`]*})\s*\n```/g, '<tool_use>$1 $2</tool_use>');
+    let convertedContent = content.replace(/```tool_use\s*\n\s*(\w+)\s+({[^`]*})\s*\n```/g, '<tool_use>$1 $2</tool_use>');
+    // 別の形式も変換: ```tool_use>write_file {...}</tool_use>```
+    convertedContent = convertedContent.replace(/```tool_use>(\w+)\s+({[^`]*})<\/tool_use>```/g, '<tool_use>$1 $2</tool_use>');
     
     const currentContent = convertedContent;
     let lastIndex = 0;
@@ -126,6 +128,7 @@ export class ToolParser {
     contentWithoutTools = contentWithoutTools.replace(/<tool_use>[^<]*?(?:<\/tool_use>|(?=<tool_use>)|$)/g, '').trim();
     // コードブロック形式も削除
     contentWithoutTools = contentWithoutTools.replace(/```tool_use\s*\n\s*\w+\s+{[^`]*}\s*\n```/g, '').trim();
+    contentWithoutTools = contentWithoutTools.replace(/```tool_use>\w+\s+{[^`]*}<\/tool_use>```/g, '').trim();
     
     return { toolCalls, contentWithoutTools: contentWithoutTools.trim() };
   }

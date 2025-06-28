@@ -65,6 +65,10 @@ export class RunCommandTool implements Tool<RunCommandParams, RunCommandResult> 
   }
 
   shouldConfirmExecute(params: RunCommandParams): boolean {
+    // テストモードでは確認をスキップ
+    if (process.env['TIGER_NO_RENDER'] === 'true') {
+      return false;
+    }
     // 安全なコマンドのリストに含まれている場合は確認不要
     const baseCommand = params.command.split('/').pop() || params.command;
     return !this.safeCommands.includes(baseCommand);

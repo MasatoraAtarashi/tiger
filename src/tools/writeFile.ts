@@ -54,6 +54,10 @@ export class WriteFileTool implements Tool<WriteFileParams, WriteFileResult> {
   }
 
   shouldConfirmExecute(_params: WriteFileParams): boolean {
+    // テストモードでは確認をスキップ
+    if (process.env['TIGER_NO_RENDER'] === 'true') {
+      return false;
+    }
     // ファイル書き込みは確認が必要
     return true;
   }
