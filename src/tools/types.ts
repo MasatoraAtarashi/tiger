@@ -15,13 +15,13 @@ export interface ToolSchema {
 
 export interface Tool<TParams = unknown, TResult = unknown> {
   schema: ToolSchema;
-  
+
   // ツールの実行前にパラメータを検証
   validateParams(params: TParams): boolean;
-  
+
   // ユーザーに実行確認が必要かどうか
   shouldConfirmExecute(params: TParams): boolean;
-  
+
   // ツールの実行
   execute(params: TParams): AsyncGenerator<TResult, void, unknown>;
 }

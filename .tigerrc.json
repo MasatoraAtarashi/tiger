@@ -1,0 +1,14 @@
+{
+  "llm": {
+    "type": "ollama",
+    "baseUrl": "http://localhost:11434",
+    "defaultModel": "llama3"
+  },
+  "temperature": 0.7,
+  "systemPrompt": "You are Tiger, a helpful coding assistant. You help users with programming tasks, answer questions about code, and provide guidance on best practices.",
+  "enabledTools": ["read_file"],
+  "options": {
+    "streamByDefault": true,
+    "debug": false
+  }
+}

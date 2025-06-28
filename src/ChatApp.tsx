@@ -8,7 +8,7 @@ import { useChat } from './hooks/useChat.js';
 
 export const ChatApp: React.FC = () => {
   const { exit } = useApp();
-  const { session, sendMessage } = useChat();
+  const { session, sendMessage, isConnected } = useChat();
 
   useEffect(() => {
     // Ctrl+C または Ctrl+D で終了
@@ -42,7 +42,9 @@ export const ChatApp: React.FC = () => {
       </Box>
 
       <Box marginBottom={1}>
-        <Text dimColor>Type your message or use /exit to quit</Text>
+        <Text dimColor>
+          {isConnected ? 'Type your message or use /exit to quit' : 'Connecting to Ollama...'}
+        </Text>
       </Box>
 
       <Box flexDirection="column" marginBottom={1}>

@@ -40,7 +40,7 @@ export class ReadFileTool implements Tool<ReadFileParams, ReadFileResult> {
     try {
       const absolutePath = path.resolve(params.filePath);
       const content = await fs.readFile(absolutePath, 'utf-8');
-      
+
       yield {
         content,
         path: absolutePath,
