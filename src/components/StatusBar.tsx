@@ -9,7 +9,7 @@ interface StatusBarProps {
   contextLength: number;
 }
 
-export const StatusBar: React.FC<StatusBarProps> = ({
+export const StatusBar = React.memo<StatusBarProps>(({
   isProcessing,
   messageCount,
   toolsUsed,
@@ -34,4 +34,5 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       </Box>
     </Box>
   );
-};
+});
+StatusBar.displayName = 'StatusBar';

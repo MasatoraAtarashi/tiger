@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { ConfirmDialog } from './components/ConfirmDialog.js';
 import { DebugInfo } from './components/DebugInfo.js';
 import { FallbackInput } from './components/FallbackInput.js';
-import { InputArea } from './components/InputArea.js';
+import { IsolatedInputArea } from './components/IsolatedInputArea.js';
 import { StatusBar } from './components/StatusBar.js';
 import { TaskStatus } from './components/TaskStatus.js';
 import { useChat } from './hooks/useChat.js';
@@ -176,32 +176,34 @@ export const ChatApp: React.FC = () => {
         {(item) => item}
       </Static>
 
-      {/* Dynamic content outside Static */}
-      {/* Connection status */}
-      {!isConnected && (
-        <Box paddingX={1}>
-          <Text dimColor>🔄 Connecting to Ollama...</Text>
-        </Box>
-      )}
-
-      {/* Task status - dynamic */}
-      {taskManager.tasks.length > 0 && (
-        <Box paddingX={1}>
-          <TaskStatus tasks={taskManager.tasks} currentAction={taskManager.currentAction} />
-        </Box>
-      )}
-
-      {/* Streaming message - dynamic */}
-      {streamingMessage && (
-        <Box flexDirection="column" marginBottom={1} paddingX={1}>
-          <Box>
-            <Text bold color="green">Tiger:</Text>
+      {/* Dynamic content outside Static - wrapped in Box to isolate re-renders */}
+      <Box flexDirection="column">
+        {/* Connection status */}
+        {!isConnected && (
+          <Box paddingX={1}>
+            <Text dimColor>🔄 Connecting to Ollama...</Text>
           </Box>
-          <Box marginLeft={2}>
-            <Text>{streamingMessage.content}</Text>
+        )}
+
+        {/* Task status - dynamic */}
+        {taskManager.tasks.length > 0 && (
+          <Box paddingX={1}>
+            <TaskStatus tasks={taskManager.tasks} currentAction={taskManager.currentAction} />
           </Box>
-        </Box>
-      )}
+        )}
+
+        {/* Streaming message - dynamic */}
+        {streamingMessage && (
+          <Box flexDirection="column" marginBottom={1} paddingX={1}>
+            <Box>
+              <Text bold color="green">Tiger:</Text>
+            </Box>
+            <Box marginLeft={2}>
+              <Text>{streamingMessage.content}</Text>
+            </Box>
+          </Box>
+        )}
+      </Box>
 
       {/* Dynamic input area - this is NOT in Static */}
       <Box paddingX={1} marginTop={1}>
@@ -219,22 +221,24 @@ export const ChatApp: React.FC = () => {
             <Text color="yellow"> Tiger is hunting for answers...</Text>
           </Box>
         ) : isRawModeSupported ? (
-          <InputArea onSubmit={handleSubmit} isProcessing={session.isProcessing} />
+          <IsolatedInputArea onSubmit={handleSubmit} isProcessing={session.isProcessing} />
         ) : (
           <FallbackInput value={fallbackInput} isProcessing={session.isProcessing} />
         )}
       </Box>
 
-      {/* Status bar */}
-      <Box borderStyle="single" borderColor="green" paddingX={1} width="100%" marginTop={1}>
-        {statusBar}
-      </Box>
-
-      {/* Footer */}
-      <Box borderStyle="single" borderColor="gray" paddingX={1} width="100%" justifyContent="space-between">
-        <Text dimColor>[TAB] Complete</Text>
-        <Text dimColor>[/help] Commands</Text>
-        <Text dimColor>[CTRL+C] Exit</Text>
+      {/* Status bar and Footer wrapped to prevent re-renders */}
+      <Box flexDirection="column">
+        <Box borderStyle="single" borderColor="green" paddingX={1} width="100%" marginTop={1}>
+          {statusBar}
+        </Box>
+        
+        {/* Footer */}
+        <Box borderStyle="single" borderColor="gray" paddingX={1} width="100%" justifyContent="space-between">
+          <Text dimColor>[TAB] Complete</Text>
+          <Text dimColor>[/help] Commands</Text>
+          <Text dimColor>[CTRL+C] Exit</Text>
+        </Box>
       </Box>
 
       {debugInfo && (

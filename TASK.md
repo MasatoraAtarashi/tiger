@@ -1,3 +1,39 @@
+- [ ] 画面レンダリングがおかしい。文字入力するたびに改行されるし、connectingが何回も表示される。sandbox/gemini-cliの実装を参考にちゃんと実行されるようにして
+```
+ 🔄 Connecting to Ollama...
+┌──────────────────────────┐
+│ 🐯 TIGER CONSOLE v1.0 🐯 │
+└──────────────────────────┘
+ 🔄 Connecting to Ollama...
+ 🔄 Connecting to Ollama...
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+ > 
+   aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa 
+```
+
+- [ ] toolを実行できていない。以下のように表示だけされるが何も起きずにTiger is hunting for answers...って表示され続ける。sandbox/gemini-cliの実装を参考にちゃんと実行されるようにして
 - [ ] レスポンス日本語にする
 - [ ] Search toolに対応する
 - [ ] Task管理もToolにする
@@ -16,3 +52,4 @@
 - [ ] prettier導入する
 - [ ] 他の人がインストールして使えるようにする(gemini-cliみたいにnpmでインストールして実行できるように)
 - [ ] 整理とリファクタリング
+- [ ] temperatureとかも、ユーザーが設定する必要ないようにする
