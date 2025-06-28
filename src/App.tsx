@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
 import { Box, Text, useInput, useApp } from 'ink';
+import React, { useState } from 'react';
 
 export const App: React.FC = () => {
   const [message, setMessage] = useState('Hello World from Tiger CLI! 🐯');
@@ -9,15 +9,15 @@ export const App: React.FC = () => {
     if (input === 'q' || key.escape) {
       exit();
     }
-    
+
     if (input === 'h') {
       setMessage('Welcome to Tiger - Your local LLM-powered coding agent!');
     }
-    
+
     if (input === 'r') {
       setMessage('Hello World from Tiger CLI! 🐯');
     }
-  });
+  }, { isActive: process.stdin.isTTY });
 
   return (
     <Box flexDirection="column" padding={1}>
@@ -26,7 +26,7 @@ export const App: React.FC = () => {
           {message}
         </Text>
       </Box>
-      
+
       <Box flexDirection="column">
         <Text dimColor>Commands:</Text>
         <Box marginLeft={2} flexDirection="column">

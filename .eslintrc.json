@@ -6,15 +6,9 @@
     "ecmaFeatures": {
       "jsx": true
     },
-    "project": "./tsconfig.json"
+    "project": ["./tsconfig.json", "./tsconfig.test.json"]
   },
-  "plugins": [
-    "@typescript-eslint",
-    "react",
-    "react-hooks",
-    "import",
-    "jest"
-  ],
+  "plugins": ["@typescript-eslint", "react", "react-hooks", "import", "jest"],
   "extends": [
     "eslint:recommended",
     "plugin:@typescript-eslint/recommended",
@@ -38,14 +32,7 @@
     "import/order": [
       "error",
       {
-        "groups": [
-          "builtin",
-          "external",
-          "internal",
-          "parent",
-          "sibling",
-          "index"
-        ],
+        "groups": ["builtin", "external", "internal", "parent", "sibling", "index"],
         "newlines-between": "always",
         "alphabetize": {
           "order": "asc",
@@ -67,10 +54,5 @@
     "es2022": true,
     "jest": true
   },
-  "ignorePatterns": [
-    "dist",
-    "node_modules",
-    "*.js",
-    "*.d.ts"
-  ]
+  "ignorePatterns": ["dist", "node_modules", "*.js", "*.d.ts"]
 }
