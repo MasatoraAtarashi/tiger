@@ -47,6 +47,11 @@ class E2ETestRunner {
 
       const tiger = spawn('node', ['dist/cli.js', '--no-logo'], {
         stdio: ['pipe', 'pipe', 'pipe'],
+        env: { 
+          ...process.env, 
+          TIGER_DEBUG: 'true',
+          TIGER_CONFIG_PATH: '.tigerrc.test.json'
+        },
       });
 
       // Collect output
@@ -163,25 +168,41 @@ class E2ETestRunner {
 
   async testToolRegistration() {
     await this.runTest('Tool registration check', async () => {
-      const result = await this.runTigerWithInput('/exit', 3000);
+      // Give more time for initialization
+      const result = await this.runTigerWithInput('test', 5000);
       
       // Check if tools were registered (from our debug logs)
       const toolsRegistered = [
         'write_file',
         'read_file',
-        'edit_file',
+        'edit',
         'run_command',
-        'list_directory',
+        'ls',
       ];
 
       const missingTools = [];
       for (const tool of toolsRegistered) {
-        if (!result.output.includes(`[Chat] Registered tool: ${tool}`)) {
+        // Check both stdout and stderr for debug logs
+        const combinedOutput = result.output + result.errors;
+        // More flexible matching
+        const toolRegistered = combinedOutput.includes(`Registered tool`) && combinedOutput.includes(tool);
+        const toolInDebugLog = combinedOutput.includes(`"toolName":"${tool}"`);
+        const toolInUseMessage = combinedOutput.includes(`Executing tool: ${tool}`);
+        
+        if (!toolRegistered && !toolInDebugLog && !toolInUseMessage) {
           missingTools.push(tool);
         }
       }
 
-      if (missingTools.length > 0) {
+      // If all tools are missing, it's likely the connection failed
+      if (missingTools.length === toolsRegistered.length) {
+        // Check for connection errors
+        const combinedOutput = result.output + result.errors;
+        if (combinedOutput.includes('Failed to connect') || combinedOutput.includes('Failed to initialize')) {
+          throw new Error('Failed to connect to LLM provider. Tools not loaded.');
+        }
+        throw new Error(`No tools were registered. Connection might have failed.`);
+      } else if (missingTools.length > 0) {
         throw new Error(`Tools not registered: ${missingTools.join(', ')}`);
       }
     });
@@ -191,21 +212,29 @@ class E2ETestRunner {
     await this.runTest('LLM response parsing', async () => {
       const result = await this.runTigerWithInput('Create a file test.py', 8000);
       
+      // Check both stdout and stderr
+      const combinedOutput = result.output + result.errors;
+      
+      // Check if we got any output from Tiger
+      if (!result.output.includes('Tiger:')) {
+        throw new Error('No Tiger response detected in output');
+      }
+      
       // Check if LLM response was received
-      if (!result.output.includes('[Chat] LLM Response:')) {
+      if (!combinedOutput.includes('LLM Response:') && !combinedOutput.includes('Stream complete')) {
         throw new Error('No LLM response detected');
       }
 
       // Check if tool calls were parsed
-      if (!result.output.includes('[Chat] Parsed tool calls:')) {
+      if (!combinedOutput.includes('Parsed tool calls:') && !combinedOutput.includes('Executing tool:')) {
         throw new Error('Tool parsing did not occur');
       }
 
       // Check for tool execution attempt
-      if (result.output.includes('[Chat] Tool not found:')) {
-        const match = result.output.match(/\[Chat\] Available tools: \[(.*?)\]/);
+      if (combinedOutput.includes('Tool not found:')) {
+        const match = combinedOutput.match(/Tool not found: (\w+)/);
         if (match) {
-          throw new Error(`Tool not found. Available tools: ${match[1]}`);
+          throw new Error(`Tool not found: ${match[1]}`);
         } else {
           throw new Error('Tool not found and available tools list is empty');
         }

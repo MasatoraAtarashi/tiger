@@ -1,5 +1,6 @@
 import { TigerConfig } from '../config/types.js';
 
+import { MockProvider } from './providers/mock.js';
 import { OllamaProvider } from './providers/ollama.js';
 import { LLMProvider, LLMProviderConfig } from './types.js';
 
@@ -12,6 +13,9 @@ export class LLMProviderFactory {
           defaultModel: config.defaultModel,
           timeout: tigerConfig?.options?.timeout,
         });
+
+      case 'mock':
+        return new MockProvider();
 
       // 将来的に他のプロバイダーを追加
       // case 'openai':

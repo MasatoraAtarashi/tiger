@@ -1,6 +1,6 @@
 import { Box, Text, useApp, useInput, useStdin } from 'ink';
 import Spinner from 'ink-spinner';
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
 import { ConfirmDialog } from './components/ConfirmDialog.js';
 import { DebugInfo } from './components/DebugInfo.js';
@@ -30,22 +30,20 @@ export const ChatApp: React.FC = () => {
   // 後で使用するため一時的にコメントアウト
   // const { columns: terminalWidth, rows: terminalHeight } = useTerminalSize();
   
-  const handleSubmit = (message: string): void => {
+  const handleSubmit = useCallback((message: string): void => {
     if (message.toLowerCase() === '/exit' || message.toLowerCase() === '/quit') {
       exit();
       return;
     }
     void sendMessage(message);
-  };
+  }, [exit, sendMessage]);
 
   // Only use useInput if raw mode is supported
-  if (isRawModeSupported) {
-    useInput((input, key) => {
-      if (key.ctrl && input === 'c') {
-        exit();
-      }
-    });
-  }
+  useInput((input, key) => {
+    if (isRawModeSupported && key.ctrl && input === 'c') {
+      exit();
+    }
+  });
 
   useEffect(() => {
     // Ctrl+C または Ctrl+D で終了

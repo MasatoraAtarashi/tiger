@@ -1,0 +1,12 @@
+{
+  "llm": {
+    "type": "mock",
+    "defaultModel": "mock-model"
+  },
+  "temperature": 0.7,
+  "options": {
+    "streamByDefault": true,
+    "debug": true,
+    "timeout": 30000
+  }
+}

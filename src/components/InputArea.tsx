@@ -1,21 +1,21 @@
 import { Box, Text } from 'ink';
 import TextInput from 'ink-text-input';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 
 interface InputAreaProps {
   onSubmit: (message: string) => void;
   isProcessing: boolean;
 }
 
-export const InputArea: React.FC<InputAreaProps> = ({ onSubmit, isProcessing }) => {
+export const InputArea = React.memo<InputAreaProps>(({ onSubmit, isProcessing }) => {
   const [input, setInput] = useState('');
 
-  const handleSubmit = (value: string): void => {
+  const handleSubmit = useCallback((value: string): void => {
     if (value.trim()) {
       onSubmit(value);
       setInput('');
     }
-  };
+  }, [onSubmit]);
 
   return (
     <Box>
@@ -31,4 +31,5 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSubmit, isProcessing }) 
       />
     </Box>
   );
-};
+});
+InputArea.displayName = 'InputArea';

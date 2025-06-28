@@ -7,7 +7,7 @@ interface MessageListProps {
   messages: Message[];
 }
 
-export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
+export const MessageList = React.memo<MessageListProps>(({ messages }) => {
   return (
     <Box flexDirection="column">
       {messages.map((message) => (
@@ -24,4 +24,5 @@ export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
       ))}
     </Box>
   );
-};
+});
+MessageList.displayName = 'MessageList';

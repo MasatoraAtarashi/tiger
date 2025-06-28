@@ -1,5 +1,6 @@
-import React, { useEffect } from 'react';
 import { useApp } from 'ink';
+import React, { useEffect } from 'react';
+
 import { useChat } from './hooks/useChat.js';
 
 // Simple non-rendering app for testing/piping
@@ -12,6 +13,7 @@ export const SimpleApp: React.FC = () => {
     const lastMessage = session.messages[session.messages.length - 1];
     if (lastMessage && lastMessage.role === 'assistant' && lastMessage.id !== 'streaming') {
       // Clean output - remove escape sequences
+      // eslint-disable-next-line no-control-regex
       const cleanContent = lastMessage.content.replace(/\x1b\[[0-9;]*[mGKH]/g, '');
       console.log(`\nTiger: ${cleanContent}\n`);
     }

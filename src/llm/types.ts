@@ -62,7 +62,7 @@ export interface LLMProvider {
 
 // プロバイダーの設定
 export interface LLMProviderConfig {
-  type: 'ollama' | 'openai' | 'anthropic' | 'gemini';
+  type: 'ollama' | 'openai' | 'anthropic' | 'gemini' | 'mock';
   apiKey?: string;
   baseUrl?: string;
   defaultModel?: string;

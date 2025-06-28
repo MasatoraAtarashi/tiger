@@ -48,6 +48,8 @@ export class ConfigLoader {
 
     // 設定ファイルの検索優先順位
     const configPaths = [
+      // 環境変数で指定されたパスを最優先
+      ...(process.env['TIGER_CONFIG_PATH'] ? [path.resolve(process.env['TIGER_CONFIG_PATH'])] : []),
       path.join(process.cwd(), '.tigerrc.json'),
       path.join(process.cwd(), 'tiger.config.json'),
       path.join(homedir(), '.tiger', 'config.json'),

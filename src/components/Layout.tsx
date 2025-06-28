@@ -6,22 +6,51 @@ interface LayoutProps {
   statusBar: React.ReactNode;
 }
 
-export const Layout: React.FC<LayoutProps> = ({ children, statusBar }) => {
+// Memoize static header component
+const Header = React.memo(() => (
+  <Box 
+    borderStyle="single"
+    borderColor="cyan"
+    paddingX={1}
+    width="100%"
+  >
+    <Box flexGrow={1} justifyContent="center">
+      <Text bold color="cyan">
+        🐯 TIGER CONSOLE v1.0 🐯
+      </Text>
+    </Box>
+  </Box>
+));
+Header.displayName = 'Header';
+
+// Memoize static footer component
+const Footer = React.memo(() => (
+  <Box 
+    borderStyle="single"
+    borderColor="gray"
+    paddingX={1}
+    width="100%"
+    justifyContent="space-between"
+  >
+    <Text dimColor>
+      [TAB] Complete
+    </Text>
+    <Text dimColor>
+      [/help] Commands
+    </Text>
+    <Text dimColor>
+      [CTRL+C] Exit
+    </Text>
+  </Box>
+));
+Footer.displayName = 'Footer';
+
+// Memoize the entire Layout component
+export const Layout = React.memo<LayoutProps>(({ children, statusBar }) => {
   return (
     <Box flexDirection="column" height="100%">
       {/* Header */}
-      <Box 
-        borderStyle="single"
-        borderColor="cyan"
-        paddingX={1}
-        width="100%"
-      >
-        <Box flexGrow={1} justifyContent="center">
-          <Text bold color="cyan">
-            🐯 TIGER CONSOLE v1.0 🐯
-          </Text>
-        </Box>
-      </Box>
+      <Header />
 
       {/* Main Content */}
       <Box 
@@ -49,23 +78,8 @@ export const Layout: React.FC<LayoutProps> = ({ children, statusBar }) => {
       </Box>
 
       {/* Footer */}
-      <Box 
-        borderStyle="single"
-        borderColor="gray"
-        paddingX={1}
-        width="100%"
-        justifyContent="space-between"
-      >
-        <Text dimColor>
-          [TAB] Complete
-        </Text>
-        <Text dimColor>
-          [/help] Commands
-        </Text>
-        <Text dimColor>
-          [CTRL+C] Exit
-        </Text>
-      </Box>
+      <Footer />
     </Box>
   );
-};
+});
+Layout.displayName = 'Layout';

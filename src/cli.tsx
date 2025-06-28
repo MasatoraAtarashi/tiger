@@ -3,8 +3,8 @@ import { render } from 'ink';
 import React from 'react';
 
 import { ChatApp } from './ChatApp.js';
-import { SimpleApp } from './SimpleApp.js';
 import { TigerLogo } from './components/TigerLogo.js';
+import { SimpleApp } from './SimpleApp.js';
 
 const parseArgs = (): { debug: boolean; skipLogo: boolean; noRender: boolean } => {
   const args = process.argv.slice(2);
@@ -36,14 +36,23 @@ const main = (): void => {
       patchConsole: false,
     });
   } else if (skipLogo) {
-    render(<ChatApp />);
+    render(<ChatApp />, {
+      exitOnCtrlC: true,
+      patchConsole: false,
+    });
   } else {
-    const { unmount } = render(<TigerLogo />);
+    const { unmount } = render(<TigerLogo />, {
+      exitOnCtrlC: true,
+      patchConsole: false,
+    });
 
     setTimeout(() => {
       unmount();
       process.stdout.write('\x1Bc'); // Clear screen
-      render(<ChatApp />);
+      render(<ChatApp />, {
+        exitOnCtrlC: true,
+        patchConsole: false,
+      });
     }, 1500);
   }
 };
