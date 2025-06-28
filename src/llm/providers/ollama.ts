@@ -107,27 +107,6 @@ export class OllamaProvider implements LLMProvider {
     });
 
     const messages = this.convertMessages(options.messages);
-    const tools = options.tools?.map((tool) => ({
-      type: 'function',
-      function: {
-        name: tool.name,
-        description: tool.description,
-        parameters: {
-          type: 'object',
-          properties: tool.parameters.reduce(
-            (acc, param) => {
-              acc[param.name] = {
-                type: param.type,
-                description: param.description,
-              };
-              return acc;
-            },
-            {} as Record<string, unknown>,
-          ),
-          required: tool.parameters.filter((p) => p.required).map((p) => p.name),
-        },
-      },
-    }));
 
     const response = await this.fetchWithTimeout(`${this.config.baseUrl}/api/chat`, {
       method: 'POST',
@@ -137,7 +116,7 @@ export class OllamaProvider implements LLMProvider {
       body: JSON.stringify({
         model: options.model || this.config.defaultModel,
         messages,
-        tools,
+        // tools, // Ollamaはまだtoolsをサポートしていない
         options: {
           temperature: options.temperature,
           num_predict: options.maxTokens,
@@ -186,43 +165,27 @@ export class OllamaProvider implements LLMProvider {
     });
 
     const messages = this.convertMessages(options.messages);
-    const tools = options.tools?.map((tool) => ({
-      type: 'function',
-      function: {
-        name: tool.name,
-        description: tool.description,
-        parameters: {
-          type: 'object',
-          properties: tool.parameters.reduce(
-            (acc, param) => {
-              acc[param.name] = {
-                type: param.type,
-                description: param.description,
-              };
-              return acc;
-            },
-            {} as Record<string, unknown>,
-          ),
-          required: tool.parameters.filter((p) => p.required).map((p) => p.name),
-        },
-      },
-    }));
 
-    const response = await this.fetchWithTimeout(`${this.config.baseUrl}/api/chat`, {
+    const requestBody = {
+      model: options.model || this.config.defaultModel,
+      messages,
+      // Ollamaはまだtoolsをサポートしていない可能性があるため、一時的に無効化
+      // tools,
+      options: {
+        temperature: options.temperature,
+        num_predict: options.maxTokens,
+      },
+      stream: true,
+    };
+
+    this.logger.debug('OllamaProvider', 'Stream request body', requestBody);
+
+    const response = await fetch(`${this.config.baseUrl}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({
-        model: options.model || this.config.defaultModel,
-        messages,
-        tools,
-        options: {
-          temperature: options.temperature,
-          num_predict: options.maxTokens,
-        },
-        stream: true,
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {

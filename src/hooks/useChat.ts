@@ -168,6 +168,8 @@ export const useChat = (): {
         let streamContent = '';
 
         for await (const event of chatRef.current.streamComplete()) {
+          logger.debug('useChat', `Received event: ${event.type}`);
+          
           if (event.type === 'content') {
             streamContent += event.content;
             // ストリーミング中のメッセージを更新
@@ -192,11 +194,20 @@ export const useChat = (): {
 
               return { ...prev, messages };
             });
-          } else if (event.type === 'message') {
-            // 最終的なメッセージで置き換え
+          } else if (event.type === 'done') {
+            // ストリーミング完了
+            const finalMessage: Message = {
+              id: uuidv4(),
+              role: 'assistant',
+              content: streamContent,
+              timestamp: new Date(),
+            };
+            
             setSession((prev) => ({
               ...prev,
-              messages: prev.messages.map((msg) => (msg.id === 'streaming' ? event.message : msg)),
+              messages: prev.messages.map((msg) => 
+                msg.id === 'streaming' ? finalMessage : msg
+              ),
               isProcessing: false,
             }));
 
@@ -206,10 +217,13 @@ export const useChat = (): {
                 ...prev!,
                 lastResponse: {
                   duration: Date.now() - startTime,
-                  tokenCount: streamContent.length, // 概算
+                  tokenCount: streamContent.length,
                 },
               }));
             }
+            break; // ループを終了
+          } else if (event.type === 'error') {
+            throw event.error;
           }
         }
       } else {

@@ -9,7 +9,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc",
-    "dev": "tsx watch src/cli.tsx",
+    "dev": "tsx src/cli.tsx",
+    "dev:watch": "tsx watch src/cli.tsx",
     "start": "node dist/cli.js",
     "test": "jest",
     "test:watch": "jest --watch",

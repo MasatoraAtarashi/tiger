@@ -4,6 +4,7 @@ import { LLMProvider, LLMMessage, StreamEvent, ToolCall } from '../llm/types.js'
 import { Tool } from '../tools/types.js';
 import { Message } from '../types.js';
 import { Logger } from '../utils/logger.js';
+import { ToolParser } from './tool-parser.js';
 
 interface ChatOptions {
   provider: LLMProvider;
@@ -54,67 +55,81 @@ export class Chat {
 
   // チャット完了（非ストリーミング）
   async complete(): Promise<Message> {
-    const tools = Array.from(this.tools.values()).map((tool) => tool.schema);
+    let finalContent = '';
+    let isFirstResponse = true;
 
-    const response = await this.provider.chatCompletion({
-      model: this.model,
-      messages: this.messages,
-      tools: tools.length > 0 ? tools : undefined,
-      temperature: this.temperature,
-      maxTokens: this.maxTokens,
-    });
-
-    // ツール呼び出しがある場合は実行
-    if (response.toolCalls && response.toolCalls.length > 0) {
-      const toolResults = await this.executeTools(response.toolCalls);
-
-      // アシスタントのレスポンスを追加
-      this.messages.push({
-        role: 'assistant',
-        content: response.content,
-        toolCalls: response.toolCalls,
-      });
-
-      // ツール実行結果を追加
-      for (const result of toolResults) {
-        this.messages.push({
-          role: 'tool',
-          content: JSON.stringify(result.data),
-          toolCallId: result.toolCallId,
-        });
-      }
-
-      // ツール実行後の最終レスポンスを取得
-      const finalResponse = await this.provider.chatCompletion({
+    while (isFirstResponse || finalContent.includes('<tool_use>')) {
+      isFirstResponse = false;
+      
+      const response = await this.provider.chatCompletion({
         model: this.model,
         messages: this.messages,
         temperature: this.temperature,
         maxTokens: this.maxTokens,
       });
 
-      this.messages.push({
-        role: 'assistant',
-        content: finalResponse.content,
-      });
+      finalContent = response.content;
+      const { toolCalls, contentWithoutTools } = ToolParser.parseToolCalls(finalContent);
 
-      return {
-        id: uuidv4(),
-        role: 'assistant',
-        content: finalResponse.content,
-        timestamp: new Date(),
-      };
+      if (toolCalls.length > 0) {
+        // アシスタントのレスポンスを追加
+        this.messages.push({
+          role: 'assistant',
+          content: finalContent,
+        });
+
+        // ツールを実行
+        for (const toolCall of toolCalls) {
+          const tool = this.tools.get(toolCall.name);
+          if (tool) {
+            try {
+              this.logger.debug('Chat', `Executing tool: ${toolCall.name}`, toolCall.args);
+              const result = await tool.execute(toolCall.args);
+              const toolResult = ToolParser.formatToolResult(toolCall.name, result);
+              
+              // ツール実行結果をユーザーメッセージとして追加
+              this.messages.push({
+                role: 'user',
+                content: toolResult,
+              });
+            } catch (error) {
+              const errorMsg = `Error executing tool ${toolCall.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+              this.logger.error('Chat', errorMsg);
+              this.messages.push({
+                role: 'user',
+                content: errorMsg,
+              });
+            }
+          } else {
+            const errorMsg = `Tool not found: ${toolCall.name}`;
+            this.messages.push({
+              role: 'user',
+              content: errorMsg,
+            });
+          }
+        }
+        // ツール実行後、次のレスポンスを生成するためにループを継続
+        continue;
+      } else {
+        // ツール呼び出しがない場合は終了
+        this.messages.push({
+          role: 'assistant',
+          content: contentWithoutTools || finalContent,
+        });
+        
+        return {
+          id: uuidv4(),
+          role: 'assistant',
+          content: contentWithoutTools || finalContent,
+          timestamp: new Date(),
+        };
+      }
     }
-
-    // アシスタントのレスポンスを追加
-    this.messages.push({
-      role: 'assistant',
-      content: response.content,
-    });
 
     return {
       id: uuidv4(),
       role: 'assistant',
-      content: response.content,
+      content: finalContent,
       timestamp: new Date(),
     };
   }
@@ -125,100 +140,86 @@ export class Chat {
     void,
     unknown
   > {
-    const tools = Array.from(this.tools.values()).map((tool) => tool.schema);
-
     let content = '';
-    const toolCalls: ToolCall[] = [];
+    let isFirstResponse = true;
 
-    const stream = this.provider.streamChatCompletion({
-      model: this.model,
-      messages: this.messages,
-      tools: tools.length > 0 ? tools : undefined,
-      temperature: this.temperature,
-      maxTokens: this.maxTokens,
-      stream: true,
-    });
+    while (isFirstResponse || content.includes('<tool_use>')) {
+      isFirstResponse = false;
+      content = '';
+      
+      const stream = this.provider.streamChatCompletion({
+        model: this.model,
+        messages: this.messages,
+        temperature: this.temperature,
+        maxTokens: this.maxTokens,
+        stream: true,
+      });
 
-    for await (const event of stream) {
-      if (event.type === 'content') {
-        content += event.content;
-        yield event;
-      } else if (event.type === 'tool_call') {
-        toolCalls.push(event.toolCall);
-        yield event;
-      } else if (event.type === 'done') {
-        // ツール呼び出しがある場合は実行
-        if (toolCalls.length > 0) {
-          const toolResults = await this.executeTools(toolCalls);
-
-          // アシスタントのレスポンスを追加
-          this.messages.push({
-            role: 'assistant',
-            content,
-            toolCalls,
-          });
-
-          // ツール実行結果を追加
-          for (const result of toolResults) {
+      for await (const event of stream) {
+        if (event.type === 'content') {
+          content += event.content;
+          yield event;
+        } else if (event.type === 'done') {
+          // LLMの応答からツール呼び出しをパース
+          const { toolCalls, contentWithoutTools } = ToolParser.parseToolCalls(content);
+          
+          if (toolCalls.length > 0) {
+            // アシスタントのレスポンスを追加（ツール呼び出し前のテキスト）
             this.messages.push({
-              role: 'tool',
-              content: JSON.stringify(result.data),
-              toolCallId: result.toolCallId,
+              role: 'assistant',
+              content: content,
             });
-          }
-
-          // ツール実行後の最終レスポンスをストリーミング
-          const finalStream = this.provider.streamChatCompletion({
-            model: this.model,
-            messages: this.messages,
-            temperature: this.temperature,
-            maxTokens: this.maxTokens,
-            stream: true,
-          });
-
-          let finalContent = '';
-          for await (const finalEvent of finalStream) {
-            if (finalEvent.type === 'content') {
-              finalContent += finalEvent.content;
-              yield finalEvent;
+            
+            // ツールを実行
+            for (const toolCall of toolCalls) {
+              const tool = this.tools.get(toolCall.name);
+              if (tool) {
+                try {
+                  this.logger.debug('Chat', `Executing tool: ${toolCall.name}`, toolCall.args);
+                  const result = await tool.execute(toolCall.args);
+                  const toolResult = ToolParser.formatToolResult(toolCall.name, result);
+                  
+                  // ツール実行結果をユーザーメッセージとして追加
+                  this.messages.push({
+                    role: 'user',
+                    content: toolResult,
+                  });
+                  
+                  // ツール結果をストリーミングイベントとして送信
+                  yield { type: 'content', content: `\n\n${toolResult}\n\n` };
+                } catch (error) {
+                  const errorMsg = `Error executing tool ${toolCall.name}: ${error instanceof Error ? error.message : 'Unknown error'}`;
+                  this.logger.error('Chat', errorMsg);
+                  this.messages.push({
+                    role: 'user',
+                    content: errorMsg,
+                  });
+                  yield { type: 'content', content: `\n\n${errorMsg}\n\n` };
+                }
+              } else {
+                const errorMsg = `Tool not found: ${toolCall.name}`;
+                this.messages.push({
+                  role: 'user',
+                  content: errorMsg,
+                });
+                yield { type: 'content', content: `\n\n${errorMsg}\n\n` };
+              }
             }
+            
+            // ツール実行後、次のレスポンスを生成するためにループを継続
+            continue;
+          } else {
+            // ツール呼び出しがない場合は終了
+            this.messages.push({
+              role: 'assistant',
+              content: contentWithoutTools || content,
+            });
+            yield event;
+            break;
           }
-
-          this.messages.push({
-            role: 'assistant',
-            content: finalContent,
-          });
-
-          yield {
-            type: 'message',
-            message: {
-              id: uuidv4(),
-              role: 'assistant',
-              content: finalContent,
-              timestamp: new Date(),
-            },
-          };
         } else {
-          // アシスタントのレスポンスを追加
-          this.messages.push({
-            role: 'assistant',
-            content,
-          });
-
-          yield {
-            type: 'message',
-            message: {
-              id: uuidv4(),
-              role: 'assistant',
-              content,
-              timestamp: new Date(),
-            },
-          };
+          yield event;
         }
-
-        yield event;
-      } else {
-        yield event;
       }
     }
   }
