@@ -224,7 +224,8 @@ export class Chat {
                 content: contentWithoutTools || content,
               });
             }
-            // doneイベントは既にyieldされているので、ここでは送信しない
+            // doneイベントを送信
+            yield { type: 'done' };
             break;
           }
         } else {

@@ -7,7 +7,7 @@ interface InputAreaProps {
   isProcessing: boolean;
 }
 
-export const InputArea: React.FC<InputAreaProps> = ({ onSubmit, isProcessing }) => {
+export const InputArea: React.FC<InputAreaProps> = React.memo(({ onSubmit, isProcessing }) => {
   const [input, setInput] = useState('');
 
   const handleSubmit = (value: string): void => {
@@ -31,4 +31,4 @@ export const InputArea: React.FC<InputAreaProps> = ({ onSubmit, isProcessing }) 
       />
     </Box>
   );
-};
+});
