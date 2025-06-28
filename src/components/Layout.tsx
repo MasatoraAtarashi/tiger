@@ -1,4 +1,4 @@
-import { Box, Static, Text } from 'ink';
+import { Box, Text } from 'ink';
 import React from 'react';
 
 interface LayoutProps {
@@ -48,16 +48,9 @@ Footer.displayName = 'Footer';
 // Memoize the entire Layout component
 export const Layout = React.memo<LayoutProps>(({ children, statusBar }) => {
   return (
-    <Box flexDirection="column" height="100%">
-      {/* Static components that should not re-render */}
-      <Static items={[1]}>
-        {() => (
-          <>
-            {/* Header */}
-            <Header />
-          </>
-        )}
-      </Static>
+    <Box flexDirection="column" flexGrow={1}>
+      {/* Header */}
+      <Header />
 
       {/* Main Content */}
       <Box 
@@ -70,6 +63,7 @@ export const Layout = React.memo<LayoutProps>(({ children, statusBar }) => {
         borderBottom={false}
         borderColor="cyan"
         paddingX={1}
+        overflow="hidden"
       >
         {children}
       </Box>
@@ -84,10 +78,8 @@ export const Layout = React.memo<LayoutProps>(({ children, statusBar }) => {
         {statusBar}
       </Box>
 
-      {/* Static footer */}
-      <Static items={[1]}>
-        {() => <Footer />}
-      </Static>
+      {/* Footer */}
+      <Footer />
     </Box>
   );
 });
