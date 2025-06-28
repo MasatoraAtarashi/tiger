@@ -7,11 +7,12 @@ import { StatusBar } from './components/GameUI.js';
 import { InputArea } from './components/InputArea.js';
 import { Layout } from './components/Layout.js';
 import { MessageList } from './components/MessageList.js';
+import { TaskStatus } from './components/TaskStatus.js';
 import { useChat } from './hooks/useChat.js';
 
 export const ChatApp: React.FC = () => {
   const { exit } = useApp();
-  const { session, sendMessage, isConnected, debugInfo } = useChat();
+  const { session, sendMessage, isConnected, debugInfo, taskManager } = useChat();
 
   useEffect(() => {
     // Ctrl+C または Ctrl+D で終了
@@ -76,6 +77,8 @@ export const ChatApp: React.FC = () => {
         </Box>
       )}
 
+      <TaskStatus tasks={taskManager.tasks} currentAction={taskManager.currentAction} />
+      
       <Box flexDirection="column" flexGrow={1} marginBottom={1}>
         <MessageList messages={session.messages} />
       </Box>

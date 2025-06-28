@@ -8,6 +8,7 @@ import { LLMProviderFactory } from '../llm/factory.js';
 import { toolRegistry } from '../tools/registry.js';
 import { Message, ChatSession } from '../types.js';
 import { Logger } from '../utils/logger.js';
+import { useTaskManager } from './useTaskManager.js';
 
 interface DebugInfo {
   lastRequest?: {
@@ -31,6 +32,7 @@ export const useChat = (): {
   sendMessage: (content: string) => Promise<void>;
   isConnected: boolean;
   debugInfo?: DebugInfo;
+  taskManager: ReturnType<typeof useTaskManager>;
 } => {
   const [session, setSession] = useState<ChatSession>({
     messages: [],
@@ -41,6 +43,7 @@ export const useChat = (): {
   const chatRef = useRef<Chat | null>(null);
   const configRef = useRef<TigerConfig | null>(null);
   const logger = Logger.getInstance();
+  const taskManager = useTaskManager();
 
   // LLMプロバイダーを初期化
   useEffect(() => {
@@ -149,6 +152,10 @@ export const useChat = (): {
       messages: [...prev.messages, userMessage],
       isProcessing: true,
     }));
+    
+    // タスクをクリア
+    taskManager.clearTasks();
+    taskManager.setCurrentAction('リクエストを分析中...');
 
     try {
       // LLMにメッセージを送信
@@ -184,6 +191,43 @@ export const useChat = (): {
             streamContent += event.content;
             updateCounter++;
             
+            // ツール呼び出しを検出
+            if (event.content.includes('<tool_use>')) {
+              const toolMatch = event.content.match(/<tool_use>(\w+)/);
+              if (toolMatch) {
+                taskManager.setCurrentAction(`ツール実行中: ${toolMatch[1]}`);
+              }
+            } else if (event.content.includes('<tool_result>')) {
+              taskManager.setCurrentAction('ツール結果を処理中...');
+            }
+            
+            // タスク完了の検出
+            if (streamContent.match(/(完了|成功|終了|completed|done|finished)/i)) {
+              // 現在進行中のタスクを完了に
+              const inProgressTask = taskManager.tasks.find(t => t.status === 'in_progress');
+              if (inProgressTask) {
+                taskManager.updateTask(inProgressTask.id, { status: 'completed' });
+              }
+            }
+            
+            // タスク開始の検出
+            const taskStartPatterns = [
+              /(今から|次に|まず|Now|Next|First).*(実行|作成|読み込|確認|解析)/i,
+              /(タスク|Task)\s*(\d+)[:：]/i
+            ];
+            
+            for (const pattern of taskStartPatterns) {
+              const match = streamContent.match(pattern);
+              if (match) {
+                // 次のペンディングタスクを進行中に
+                const nextTask = taskManager.tasks.find(t => t.status === 'pending');
+                if (nextTask) {
+                  taskManager.updateTask(nextTask.id, { status: 'in_progress' });
+                }
+                break;
+              }
+            }
+            
             // 一定間隔でのみ画面を更新
             if (updateCounter % UPDATE_INTERVAL === 0) {
               logger.debug('useChat', `Stream content updated: ${streamContent.length} chars`);
@@ -213,6 +257,14 @@ export const useChat = (): {
           } else if (event.type === 'done') {
             // ストリーミング完了
             logger.debug('useChat', `Stream complete. Total content: ${streamContent}`);
+            
+            // タスクを解析
+            if (streamContent.includes('タスク') || streamContent.includes('1.') || streamContent.includes('-')) {
+              taskManager.parseAndAddTasks(streamContent);
+            }
+            
+            taskManager.setCurrentAction(undefined);
+            
             const finalMessage: Message = {
               id: uuidv4(),
               role: 'assistant',
@@ -273,5 +325,5 @@ export const useChat = (): {
     }
   }, []);
 
-  return { session, sendMessage, isConnected, debugInfo };
+  return { session, sendMessage, isConnected, debugInfo, taskManager };
 };
