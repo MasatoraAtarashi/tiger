@@ -10,9 +10,10 @@ export class ToolParser {
     contentWithoutTools: string;
   } {
     const toolCalls: ParsedToolCall[] = [];
-    let currentContent = content;
+    const currentContent = content;
     let lastIndex = 0;
     
+    // eslint-disable-next-line no-constant-condition
     while (true) {
       // <tool_use>を探す
       const startPattern = '<tool_use>';

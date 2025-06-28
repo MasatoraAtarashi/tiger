@@ -1,4 +1,6 @@
+import { ErrorCode, LLMError } from '../../errors/index.js';
 import { Logger } from '../../utils/logger.js';
+import { retryWithExponentialBackoff } from '../../utils/retry.js';
 import {
   ChatCompletionOptions,
   ChatCompletionResponse,
@@ -84,17 +86,32 @@ export class OllamaProvider implements LLMProvider {
 
   async listModels(): Promise<string[]> {
     try {
-      const response = await this.fetchWithTimeout(`${this.config.baseUrl}/api/tags`);
-      if (!response.ok) {
-        throw new Error(`Failed to list models: ${response.statusText}`);
-      }
-      const data = (await response.json()) as { models: Array<{ name: string }> };
-      return data.models.map((model) => model.name);
+      return await retryWithExponentialBackoff(async () => {
+        const response = await this.fetchWithTimeout(`${this.config.baseUrl}/api/tags`);
+        if (!response.ok) {
+          throw new LLMError(
+            ErrorCode.LLM_CONNECTION_FAILED,
+            `Failed to list models: ${response.statusText}`,
+            'ollama',
+            undefined,
+            { status: response.status }
+          );
+        }
+        const data = (await response.json()) as { models: Array<{ name: string }> };
+        return data.models.map((model) => model.name);
+      });
     } catch (error) {
-      if (error instanceof Error) {
-        throw new Error(`Failed to connect to Ollama: ${error.message}`);
+      if (error instanceof LLMError) {
+        throw error;
       }
-      throw error;
+      throw new LLMError(
+        ErrorCode.LLM_CONNECTION_FAILED,
+        `Failed to connect to Ollama: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        'ollama',
+        undefined,
+        undefined,
+        error instanceof Error ? error : undefined
+      );
     }
   }
 
