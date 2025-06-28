@@ -5,6 +5,7 @@ import React from 'react';
 import { ChatApp } from './ChatApp.js';
 import { TigerLogo } from './components/TigerLogo.js';
 import { SimpleApp } from './SimpleApp.js';
+import { FilteredStream } from './utils/filtered-stream.js';
 
 const parseArgs = (): { debug: boolean; skipLogo: boolean; noRender: boolean } => {
   const args = process.argv.slice(2);
@@ -35,25 +36,43 @@ const main = (): void => {
       exitOnCtrlC: true,
       patchConsole: false,
     });
-  } else if (skipLogo) {
-    render(<ChatApp />, {
-      exitOnCtrlC: true,
-      patchConsole: false,
-    });
   } else {
-    const { unmount } = render(<TigerLogo />, {
-      exitOnCtrlC: true,
-      patchConsole: false,
-    });
-
-    setTimeout(() => {
-      unmount();
-      process.stdout.write('\x1Bc'); // Clear screen
+    // Create filtered stdout to prevent screen clearing
+    const filteredStdout = new FilteredStream(process.stdout);
+    
+    if (skipLogo) {
       render(<ChatApp />, {
+        stdout: filteredStdout as any,
+        stdin: process.stdin,
+        stderr: process.stderr,
         exitOnCtrlC: true,
         patchConsole: false,
+        debug: false,
       });
-    }, 1500);
+    } else {
+      const { unmount } = render(<TigerLogo />, {
+        stdout: filteredStdout as any,
+        stdin: process.stdin,
+        stderr: process.stderr,
+        exitOnCtrlC: true,
+        patchConsole: false,
+        debug: false,
+      });
+
+      setTimeout(() => {
+        unmount();
+        // Clear screen manually once before starting the main app
+        process.stdout.write('\x1Bc');
+        render(<ChatApp />, {
+          stdout: filteredStdout as any,
+          stdin: process.stdin,
+          stderr: process.stderr,
+          exitOnCtrlC: true,
+          patchConsole: false,
+          debug: false,
+        });
+      }, 1500);
+    }
   }
 };
 
