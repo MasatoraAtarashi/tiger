@@ -12,14 +12,14 @@ export const GameUI: React.FC<GameUIProps> = ({ children, title = 'TIGER CONSOLE
     <Box flexDirection="column" width="100%" height="100%">
       {/* Header */}
       <Box 
-        borderStyle="double"
-        borderColor="yellow"
+        borderStyle="single"
+        borderColor="cyan"
         paddingX={1}
         width="100%"
       >
         <Box flexGrow={1} justifyContent="center">
-          <Text bold color="yellow">
-            ⚡ {title} ⚡
+          <Text bold color="cyan">
+            🐯 {title} 🐯
           </Text>
         </Box>
       </Box>
@@ -51,19 +51,19 @@ export const GameUI: React.FC<GameUIProps> = ({ children, title = 'TIGER CONSOLE
         </Box>
       )}
 
-      {/* Footer */}
+      {/* Footer - ショートカットヘルプ */}
       <Box 
-        borderStyle="double"
-        borderColor="yellow"
+        borderStyle="single"
+        borderColor="gray"
         paddingX={1}
         width="100%"
         justifyContent="space-between"
       >
         <Text dimColor>
-          [ESC] Menu
+          [TAB] Complete
         </Text>
         <Text dimColor>
-          [TAB] Complete
+          [/help] Commands
         </Text>
         <Text dimColor>
           [CTRL+C] Exit
@@ -73,42 +73,56 @@ export const GameUI: React.FC<GameUIProps> = ({ children, title = 'TIGER CONSOLE
   );
 };
 
-// HP/MP風のステータスバー
+// 開発ステータスバー
 interface StatusBarProps {
   isProcessing: boolean;
   messageCount: number;
   toolsUsed: number;
+  currentModel?: string;
+  contextLength?: number;
 }
 
-export const StatusBar: React.FC<StatusBarProps> = ({ isProcessing, messageCount, toolsUsed }) => {
+export const StatusBar: React.FC<StatusBarProps> = ({ 
+  isProcessing, 
+  messageCount, 
+  toolsUsed,
+  currentModel = 'gemma3:4b',
+  contextLength = 0
+}) => {
+  // コンテキスト使用率の計算（gemma3:4bの上限は8192トークン）
+  const maxContext = 8192;
+  const contextPercent = Math.min(100, Math.round((contextLength / maxContext) * 100));
+  const contextBarLength = 20;
+  const filledBars = Math.round((contextPercent / 100) * contextBarLength);
+  
   return (
     <Box justifyContent="space-between" width="100%">
       <Box gap={2}>
         <Text>
-          <Text color="red">❤️ HP: </Text>
-          <Text color="green">████████</Text>
-          <Text color="gray">██</Text>
-          <Text> 80/100</Text>
+          <Text color="cyan">🤖 Model: </Text>
+          <Text bold>{currentModel}</Text>
         </Text>
         <Text>
-          <Text color="blue">💫 MP: </Text>
-          <Text color="cyan">██████</Text>
-          <Text color="gray">████</Text>
-          <Text> 60/100</Text>
+          <Text color="yellow">📊 Context: </Text>
+          <Text color={contextPercent > 80 ? 'red' : contextPercent > 60 ? 'yellow' : 'green'}>
+            {'█'.repeat(filledBars)}
+            <Text color="gray">{'░'.repeat(contextBarLength - filledBars)}</Text>
+          </Text>
+          <Text> {contextPercent}%</Text>
         </Text>
       </Box>
       <Box gap={2}>
         <Text>
-          <Text color="yellow">📝 Messages: </Text>
+          <Text color="blue">💬 Messages: </Text>
           <Text bold>{messageCount}</Text>
         </Text>
         <Text>
-          <Text color="magenta">🔧 Tools Used: </Text>
+          <Text color="magenta">🔧 Tools: </Text>
           <Text bold>{toolsUsed}</Text>
         </Text>
         <Text>
           <Text color={isProcessing ? 'yellow' : 'green'}>
-            {isProcessing ? '⚡ PROCESSING' : '✅ READY'}
+            {isProcessing ? '⚡ WORKING' : '✅ READY'}
           </Text>
         </Text>
       </Box>

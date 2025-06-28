@@ -40,6 +40,14 @@ export const ChatApp: React.FC = () => {
     msg.content.includes('<tool_use>') || msg.content.includes('<tool_result>')
   ).length;
 
+  // コンテキスト長の計算（概算）
+  const contextLength = session.messages.reduce((total, msg) => {
+    return total + Math.ceil(msg.content.length / 4); // 4文字を1トークンとして概算
+  }, 0);
+
+  // 現在のモデル名を取得
+  const currentModel = debugInfo?.model || 'gemma3:4b';
+
   return (
     <GameUI 
       title="TIGER CONSOLE v1.0"
@@ -48,6 +56,8 @@ export const ChatApp: React.FC = () => {
           isProcessing={session.isProcessing}
           messageCount={session.messages.length}
           toolsUsed={toolsUsedCount}
+          currentModel={currentModel}
+          contextLength={contextLength}
         />
       }
     >
