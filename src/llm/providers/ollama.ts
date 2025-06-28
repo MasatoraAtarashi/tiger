@@ -10,6 +10,7 @@ import {
 interface OllamaConfig {
   baseUrl: string;
   defaultModel: string;
+  timeout?: number;
 }
 
 interface OllamaMessage {
@@ -45,19 +46,44 @@ export class OllamaProvider implements LLMProvider {
   name = 'ollama';
   private config: OllamaConfig;
   private logger = Logger.getInstance();
+  private readonly DEFAULT_TIMEOUT = 30000; // 30秒のデフォルトタイムアウト
 
   constructor(config: Partial<OllamaConfig> = {}) {
     this.config = {
       baseUrl: config.baseUrl || 'http://localhost:11434',
       defaultModel: config.defaultModel || 'llama3',
+      timeout: config.timeout || this.DEFAULT_TIMEOUT,
     };
 
     this.logger.debug('OllamaProvider', 'Initialized', { config: this.config });
   }
 
+  private async fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => {
+      controller.abort();
+      this.logger.error('OllamaProvider', 'Request timeout', { url, timeout: this.config.timeout });
+    }, this.config.timeout);
+
+    try {
+      const response = await fetch(url, {
+        ...options,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+      return response;
+    } catch (error) {
+      clearTimeout(timeoutId);
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error(`Request timeout after ${this.config.timeout}ms`);
+      }
+      throw error;
+    }
+  }
+
   async listModels(): Promise<string[]> {
     try {
-      const response = await fetch(`${this.config.baseUrl}/api/tags`);
+      const response = await this.fetchWithTimeout(`${this.config.baseUrl}/api/tags`);
       if (!response.ok) {
         throw new Error(`Failed to list models: ${response.statusText}`);
       }
@@ -103,7 +129,7 @@ export class OllamaProvider implements LLMProvider {
       },
     }));
 
-    const response = await fetch(`${this.config.baseUrl}/api/chat`, {
+    const response = await this.fetchWithTimeout(`${this.config.baseUrl}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -154,6 +180,11 @@ export class OllamaProvider implements LLMProvider {
   async *streamChatCompletion(
     options: ChatCompletionOptions,
   ): AsyncGenerator<StreamEvent, void, unknown> {
+    this.logger.debug('OllamaProvider', 'Starting stream chat completion', {
+      model: options.model || this.config.defaultModel,
+      messageCount: options.messages.length,
+    });
+
     const messages = this.convertMessages(options.messages);
     const tools = options.tools?.map((tool) => ({
       type: 'function',
@@ -177,7 +208,7 @@ export class OllamaProvider implements LLMProvider {
       },
     }));
 
-    const response = await fetch(`${this.config.baseUrl}/api/chat`, {
+    const response = await this.fetchWithTimeout(`${this.config.baseUrl}/api/chat`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -207,11 +238,21 @@ export class OllamaProvider implements LLMProvider {
 
     const decoder = new TextDecoder();
     let buffer = '';
+    let messageCount = 0;
+    const startTime = Date.now();
 
     try {
+      this.logger.debug('OllamaProvider', 'Stream reader started');
+      
       while (true) {
         const result = await reader.read();
-        if (result.done) break;
+        if (result.done) {
+          this.logger.debug('OllamaProvider', 'Stream reader done', {
+            duration: Date.now() - startTime,
+            messageCount,
+          });
+          break;
+        }
 
         buffer += decoder.decode(result.value as Uint8Array, { stream: true });
         const lines = buffer.split('\n');
@@ -219,8 +260,16 @@ export class OllamaProvider implements LLMProvider {
 
         for (const line of lines) {
           if (line.trim()) {
+            messageCount++;
             try {
               const data = JSON.parse(line) as OllamaStreamResponse;
+              
+              if (messageCount % 10 === 0) {
+                this.logger.debug('OllamaProvider', 'Stream progress', {
+                  messageCount,
+                  done: data.done,
+                });
+              }
 
               if (data.message?.content) {
                 yield { type: 'content', content: data.message.content };
@@ -241,22 +290,35 @@ export class OllamaProvider implements LLMProvider {
               }
 
               if (data.done) {
+                this.logger.debug('OllamaProvider', 'Stream complete signal received');
                 yield { type: 'done' };
               }
             } catch (error) {
-              console.error('Failed to parse streaming response:', error);
+              this.logger.error('OllamaProvider', 'Failed to parse streaming response', {
+                error: error instanceof Error ? error.message : 'Unknown error',
+                line,
+              });
+              // パースエラーはスキップして続行
             }
           }
         }
       }
+    } catch (error) {
+      this.logger.error('OllamaProvider', 'Stream processing error', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        duration: Date.now() - startTime,
+        messageCount,
+      });
+      yield { type: 'error', error: error instanceof Error ? error : new Error('Unknown streaming error') };
     } finally {
       reader.releaseLock();
+      this.logger.debug('OllamaProvider', 'Stream reader released');
     }
   }
 
   async healthCheck(): Promise<boolean> {
     try {
-      const response = await fetch(`${this.config.baseUrl}/api/version`);
+      const response = await this.fetchWithTimeout(`${this.config.baseUrl}/api/version`);
       return response.ok;
     } catch {
       return false;

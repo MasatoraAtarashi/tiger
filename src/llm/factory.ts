@@ -1,13 +1,15 @@
 import { OllamaProvider } from './providers/ollama.js';
 import { LLMProvider, LLMProviderConfig } from './types.js';
+import { TigerConfig } from '../config/types.js';
 
 export class LLMProviderFactory {
-  static create(config: LLMProviderConfig): LLMProvider {
+  static create(config: LLMProviderConfig, tigerConfig?: TigerConfig): LLMProvider {
     switch (config.type) {
       case 'ollama':
         return new OllamaProvider({
           baseUrl: config.baseUrl,
           defaultModel: config.defaultModel,
+          timeout: tigerConfig?.options?.timeout,
         });
 
       // 将来的に他のプロバイダーを追加

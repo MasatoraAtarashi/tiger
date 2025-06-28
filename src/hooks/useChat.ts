@@ -61,7 +61,7 @@ export const useChat = (): {
           logger.setDebugMode(true);
         }
 
-        const provider = LLMProviderFactory.create(config.llm);
+        const provider = LLMProviderFactory.create(config.llm, config);
 
         // ヘルスチェック
         const healthy = await provider.healthCheck();
