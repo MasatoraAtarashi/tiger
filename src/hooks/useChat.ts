@@ -174,35 +174,42 @@ export const useChat = (): {
       const config = await ConfigLoader.getInstance().load();
       if (config.options?.streamByDefault) {
         let streamContent = '';
+        let updateCounter = 0;
+        const UPDATE_INTERVAL = 3; // 3チャンクごとに更新
 
         for await (const event of chatRef.current.streamComplete()) {
           logger.debug('useChat', `Received event: ${event.type}`, event);
           
           if (event.type === 'content') {
             streamContent += event.content;
-            logger.debug('useChat', `Stream content updated: ${streamContent.length} chars`);
-            // ストリーミング中のメッセージを更新
-            setSession((prev) => {
-              const messages = [...prev.messages];
-              const lastMessage = messages[messages.length - 1];
+            updateCounter++;
+            
+            // 一定間隔でのみ画面を更新
+            if (updateCounter % UPDATE_INTERVAL === 0) {
+              logger.debug('useChat', `Stream content updated: ${streamContent.length} chars`);
+              // ストリーミング中のメッセージを更新
+              setSession((prev) => {
+                const messages = [...prev.messages];
+                const lastMessage = messages[messages.length - 1];
 
-              if (
-                lastMessage &&
-                lastMessage.role === 'assistant' &&
-                lastMessage.id === 'streaming'
-              ) {
-                lastMessage.content = streamContent;
-              } else {
-                messages.push({
-                  id: 'streaming',
-                  role: 'assistant',
-                  content: streamContent,
-                  timestamp: new Date(),
-                });
-              }
+                if (
+                  lastMessage &&
+                  lastMessage.role === 'assistant' &&
+                  lastMessage.id === 'streaming'
+                ) {
+                  lastMessage.content = streamContent;
+                } else {
+                  messages.push({
+                    id: 'streaming',
+                    role: 'assistant',
+                    content: streamContent,
+                    timestamp: new Date(),
+                  });
+                }
 
-              return { ...prev, messages };
-            });
+                return { ...prev, messages };
+              });
+            }
           } else if (event.type === 'done') {
             // ストリーミング完了
             logger.debug('useChat', `Stream complete. Total content: ${streamContent}`);

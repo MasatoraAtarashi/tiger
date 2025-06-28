@@ -7,7 +7,7 @@ interface MessageListProps {
   messages: Message[];
 }
 
-export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
+export const MessageList: React.FC<MessageListProps> = React.memo(({ messages }) => {
   return (
     <Static items={messages}>
       {(message) => (
@@ -24,4 +24,4 @@ export const MessageList: React.FC<MessageListProps> = ({ messages }) => {
       )}
     </Static>
   );
-};
+});

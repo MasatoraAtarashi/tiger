@@ -7,7 +7,7 @@ interface GameUIProps {
   statusBar?: React.ReactNode;
 }
 
-export const GameUI: React.FC<GameUIProps> = ({ children, title = 'TIGER CONSOLE', statusBar }) => {
+export const GameUI: React.FC<GameUIProps> = React.memo(({ children, title = 'TIGER CONSOLE', statusBar }) => {
   return (
     <Box flexDirection="column" width="100%" height="100%">
       {/* Header */}
@@ -71,7 +71,7 @@ export const GameUI: React.FC<GameUIProps> = ({ children, title = 'TIGER CONSOLE
       </Box>
     </Box>
   );
-};
+});
 
 // 開発ステータスバー
 interface StatusBarProps {
@@ -82,7 +82,7 @@ interface StatusBarProps {
   contextLength?: number;
 }
 
-export const StatusBar: React.FC<StatusBarProps> = ({ 
+export const StatusBar: React.FC<StatusBarProps> = React.memo(({ 
   isProcessing, 
   messageCount, 
   toolsUsed,
@@ -128,4 +128,4 @@ export const StatusBar: React.FC<StatusBarProps> = ({
       </Box>
     </Box>
   );
-};
+});

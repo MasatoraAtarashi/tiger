@@ -1,6 +1,6 @@
 import { Box, Text, useApp } from 'ink';
 import Spinner from 'ink-spinner';
-import React, { useEffect } from 'react';
+import React, { useEffect, useMemo } from 'react';
 
 import { DebugInfo } from './components/DebugInfo.js';
 import { GameUI, StatusBar } from './components/GameUI.js';
@@ -36,30 +36,39 @@ export const ChatApp: React.FC = () => {
   };
 
   // ツール使用回数をカウント
-  const toolsUsedCount = session.messages.filter((msg) => 
-    msg.content.includes('<tool_use>') || msg.content.includes('<tool_result>')
-  ).length;
+  const toolsUsedCount = useMemo(() => 
+    session.messages.filter((msg) => 
+      msg.content.includes('<tool_use>') || msg.content.includes('<tool_result>')
+    ).length,
+    [session.messages]
+  );
 
   // コンテキスト長の計算（概算）
-  const contextLength = session.messages.reduce((total, msg) => {
-    return total + Math.ceil(msg.content.length / 4); // 4文字を1トークンとして概算
-  }, 0);
+  const contextLength = useMemo(() => 
+    session.messages.reduce((total, msg) => {
+      return total + Math.ceil(msg.content.length / 4); // 4文字を1トークンとして概算
+    }, 0),
+    [session.messages]
+  );
 
   // 現在のモデル名を取得
   const currentModel = debugInfo?.model || 'gemma3:4b';
 
+  // StatusBarコンポーネントをメモ化
+  const statusBar = useMemo(() => (
+    <StatusBar 
+      isProcessing={session.isProcessing}
+      messageCount={session.messages.length}
+      toolsUsed={toolsUsedCount}
+      currentModel={currentModel}
+      contextLength={contextLength}
+    />
+  ), [session.isProcessing, session.messages.length, toolsUsedCount, currentModel, contextLength]);
+
   return (
     <GameUI 
       title="TIGER CONSOLE v1.0"
-      statusBar={
-        <StatusBar 
-          isProcessing={session.isProcessing}
-          messageCount={session.messages.length}
-          toolsUsed={toolsUsedCount}
-          currentModel={currentModel}
-          contextLength={contextLength}
-        />
-      }
+      statusBar={statusBar}
     >
       <Box flexDirection="column" flexGrow={1}>
         <Box marginBottom={1}>
