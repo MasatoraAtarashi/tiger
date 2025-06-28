@@ -13,7 +13,7 @@ interface TaskStatusProps {
   currentAction?: string;
 }
 
-export const TaskStatus: React.FC<TaskStatusProps> = React.memo(({ tasks, currentAction }) => {
+export const TaskStatus: React.FC<TaskStatusProps> = ({ tasks, currentAction }) => {
   if (tasks.length === 0 && !currentAction) {
     return null;
   }
@@ -87,4 +87,4 @@ export const TaskStatus: React.FC<TaskStatusProps> = React.memo(({ tasks, curren
       )}
     </Box>
   );
-});
+};

@@ -6,7 +6,7 @@ interface LayoutProps {
   statusBar: React.ReactNode;
 }
 
-export const Layout: React.FC<LayoutProps> = React.memo(({ children, statusBar }) => {
+export const Layout: React.FC<LayoutProps> = ({ children, statusBar }) => {
   return (
     <Box flexDirection="column" height="100%">
       {/* Header */}
@@ -68,4 +68,4 @@ export const Layout: React.FC<LayoutProps> = React.memo(({ children, statusBar }
       </Box>
     </Box>
   );
-});
+};
