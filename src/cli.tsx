@@ -4,7 +4,7 @@ import BigText from 'ink-big-text';
 import Gradient from 'ink-gradient';
 import React from 'react';
 
-import { App } from './App.js';
+import { ChatApp } from './ChatApp.js';
 
 const TigerLogo: React.FC = () => (
   <Gradient colors={['#FF6B00', '#FFD93D', '#FF6B00']}>
@@ -13,11 +13,12 @@ const TigerLogo: React.FC = () => (
 );
 
 const main = (): void => {
-  render(<TigerLogo />);
+  const { clear } = render(<TigerLogo />);
 
   setTimeout(() => {
-    render(<App />);
-  }, 2000);
+    clear();
+    render(<ChatApp />);
+  }, 1500);
 };
 
 main();

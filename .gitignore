@@ -46,4 +46,7 @@ Thumbs.db
 .cache/
 
 # Sandbox
-sandbox/gemini-cli/
+sandbox/
+
+# Planning
+PLAN.md
