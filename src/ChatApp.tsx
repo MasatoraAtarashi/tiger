@@ -1,4 +1,4 @@
-import { Box, Text, useApp, useInput, useStdin } from 'ink';
+import { Box, Static, Text, useApp, useInput, useStdin, useStdout } from 'ink';
 import Spinner from 'ink-spinner';
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 
@@ -6,8 +6,6 @@ import { ConfirmDialog } from './components/ConfirmDialog.js';
 import { DebugInfo } from './components/DebugInfo.js';
 import { FallbackInput } from './components/FallbackInput.js';
 import { InputArea } from './components/InputArea.js';
-import { Layout } from './components/Layout.js';
-import { MessageList } from './components/MessageList.js';
 import { StatusBar } from './components/StatusBar.js';
 import { TaskStatus } from './components/TaskStatus.js';
 import { useChat } from './hooks/useChat.js';
@@ -16,7 +14,10 @@ import { useChat } from './hooks/useChat.js';
 export const ChatApp: React.FC = () => {
   const { exit } = useApp();
   const { isRawModeSupported } = useStdin();
+  const { write } = useStdout();
   const [fallbackInput, setFallbackInput] = useState('');
+  const [staticKey] = useState(0);
+  const [hasCleared, setHasCleared] = useState(false);
   
   const { 
     session, 
@@ -44,6 +45,14 @@ export const ChatApp: React.FC = () => {
       exit();
     }
   });
+
+  // Clear screen once on mount
+  useEffect(() => {
+    if (!hasCleared && isRawModeSupported) {
+      write('\x1B[2J\x1B[3J\x1B[H');
+      setHasCleared(true);
+    }
+  }, [hasCleared, isRawModeSupported, write]);
 
   useEffect(() => {
     // Ctrl+C または Ctrl+D で終了
@@ -121,22 +130,50 @@ export const ChatApp: React.FC = () => {
   ), [session.isProcessing, session.messages.length, toolsUsedCount, currentModel, contextLength]);
 
   return (
-    <Layout statusBar={statusBar}>
-      {!session.isProcessing && (
-        <Box marginBottom={1}>
-          <Text dimColor>
-            {isConnected ? '⚡ Type your message or use /exit to quit' : '🔄 Connecting to Ollama...'}
-          </Text>
-        </Box>
-      )}
+    <Box flexDirection="column" flexGrow={1}>
+      <Static key={staticKey} items={[
+        // Header
+        <Box key="header" borderStyle="single" borderColor="cyan" paddingX={1} width="100%">
+          <Box flexGrow={1} justifyContent="center">
+            <Text bold color="cyan">🐯 TIGER CONSOLE v1.0 🐯</Text>
+          </Box>
+        </Box>,
+        
+        // Status message
+        !session.isProcessing && (
+          <Box key="status" marginY={1} paddingX={1}>
+            <Text dimColor>
+              {isConnected ? '⚡ Type your message or use /exit to quit' : '🔄 Connecting to Ollama...'}
+            </Text>
+          </Box>
+        ),
+        
+        // Task status
+        taskManager.tasks.length > 0 && (
+          <Box key="tasks" paddingX={1}>
+            <TaskStatus tasks={taskManager.tasks} currentAction={taskManager.currentAction} />
+          </Box>
+        ),
+        
+        // Messages
+        ...session.messages.map((message) => (
+          <Box key={message.id} flexDirection="column" marginBottom={1} paddingX={1}>
+            <Box>
+              <Text bold color={message.role === 'user' ? 'cyan' : 'green'}>
+                {message.role === 'user' ? 'You' : 'Tiger'}:
+              </Text>
+            </Box>
+            <Box marginLeft={2}>
+              <Text>{message.content}</Text>
+            </Box>
+          </Box>
+        ))
+      ].filter(Boolean)}>
+        {(item) => item}
+      </Static>
 
-      <TaskStatus tasks={taskManager.tasks} currentAction={taskManager.currentAction} />
-      
-      <Box flexDirection="column" flexGrow={1} marginBottom={1}>
-        <MessageList messages={session.messages} />
-      </Box>
-
-      <Box>
+      {/* Dynamic input area - this is NOT in Static */}
+      <Box paddingX={1} marginTop={1}>
         {pendingConfirmation ? (
           <ConfirmDialog
             message={pendingConfirmation.message}
@@ -157,11 +194,23 @@ export const ChatApp: React.FC = () => {
         )}
       </Box>
 
+      {/* Status bar */}
+      <Box borderStyle="single" borderColor="green" paddingX={1} width="100%" marginTop={1}>
+        {statusBar}
+      </Box>
+
+      {/* Footer */}
+      <Box borderStyle="single" borderColor="gray" paddingX={1} width="100%" justifyContent="space-between">
+        <Text dimColor>[TAB] Complete</Text>
+        <Text dimColor>[/help] Commands</Text>
+        <Text dimColor>[CTRL+C] Exit</Text>
+      </Box>
+
       {debugInfo && (
         <Box marginTop={1}>
           <DebugInfo info={debugInfo} />
         </Box>
       )}
-    </Layout>
+    </Box>
   );
 };
