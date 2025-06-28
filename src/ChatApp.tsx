@@ -129,48 +129,65 @@ export const ChatApp: React.FC = () => {
     />
   ), [session.isProcessing, session.messages.length, toolsUsedCount, currentModel, contextLength]);
 
+  // Separate completed messages from streaming message
+  const completedMessages = session.messages.filter(msg => msg.id !== 'streaming');
+  const streamingMessage = session.messages.find(msg => msg.id === 'streaming');
+
   return (
     <Box flexDirection="column" flexGrow={1}>
-      <Static key={staticKey} items={[
-        // Header
-        <Box key="header" borderStyle="single" borderColor="cyan" paddingX={1} width="100%">
-          <Box flexGrow={1} justifyContent="center">
-            <Text bold color="cyan">🐯 TIGER CONSOLE v1.0 🐯</Text>
-          </Box>
-        </Box>,
-        
-        // Status message
-        !session.isProcessing && (
-          <Box key="status" marginY={1} paddingX={1}>
-            <Text dimColor>
-              {isConnected ? '⚡ Type your message or use /exit to quit' : '🔄 Connecting to Ollama...'}
-            </Text>
-          </Box>
-        ),
-        
-        // Task status
-        taskManager.tasks.length > 0 && (
-          <Box key="tasks" paddingX={1}>
-            <TaskStatus tasks={taskManager.tasks} currentAction={taskManager.currentAction} />
-          </Box>
-        ),
-        
-        // Messages
-        ...session.messages.map((message) => (
-          <Box key={message.id} flexDirection="column" marginBottom={1} paddingX={1}>
+      {/* Static header */}
+      <Box borderStyle="single" borderColor="cyan" paddingX={1} width="100%">
+        <Box flexGrow={1} justifyContent="center">
+          <Text bold color="cyan">🐯 TIGER CONSOLE v1.0 🐯</Text>
+        </Box>
+      </Box>
+
+      {/* Dynamic status - outside of Static */}
+      {!session.isProcessing && (
+        <Box marginY={1} paddingX={1}>
+          <Text dimColor>
+            {isConnected ? '⚡ Type your message or use /exit to quit' : '🔄 Connecting to Ollama...'}
+          </Text>
+        </Box>
+      )}
+
+      {/* Task status - outside of Static */}
+      {taskManager.tasks.length > 0 && (
+        <Box paddingX={1}>
+          <TaskStatus tasks={taskManager.tasks} currentAction={taskManager.currentAction} />
+        </Box>
+      )}
+
+      {/* Messages container with scroll */}
+      <Box flexDirection="column" flexGrow={1} overflow="hidden">
+        {/* Static messages - only completed ones */}
+        <Static key={staticKey} items={completedMessages}>
+          {(message) => (
+            <Box key={message.id} flexDirection="column" marginBottom={1} paddingX={1}>
+              <Box>
+                <Text bold color={message.role === 'user' ? 'cyan' : 'green'}>
+                  {message.role === 'user' ? 'You' : 'Tiger'}:
+                </Text>
+              </Box>
+              <Box marginLeft={2}>
+                <Text>{message.content}</Text>
+              </Box>
+            </Box>
+          )}
+        </Static>
+
+        {/* Streaming message - outside of Static */}
+        {streamingMessage && (
+          <Box flexDirection="column" marginBottom={1} paddingX={1}>
             <Box>
-              <Text bold color={message.role === 'user' ? 'cyan' : 'green'}>
-                {message.role === 'user' ? 'You' : 'Tiger'}:
-              </Text>
+              <Text bold color="green">Tiger:</Text>
             </Box>
             <Box marginLeft={2}>
-              <Text>{message.content}</Text>
+              <Text>{streamingMessage.content}</Text>
             </Box>
           </Box>
-        ))
-      ].filter(Boolean)}>
-        {(item) => item}
-      </Static>
+        )}
+      </Box>
 
       {/* Dynamic input area - this is NOT in Static */}
       <Box paddingX={1} marginTop={1}>
