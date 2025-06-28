@@ -19,7 +19,9 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "typecheck": "tsc --noEmit",
-    "prepare": "npm run build"
+    "prepare": "npm run build",
+    "test:e2e": "npm run build && node test/e2e/test-runner.js",
+    "test:rendering": "npm run build && node test/e2e/rendering-test.js"
   },
   "keywords": [
     "cli",
