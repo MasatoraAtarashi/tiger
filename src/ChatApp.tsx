@@ -16,8 +16,14 @@ export const ChatApp: React.FC = () => {
   const { isRawModeSupported } = useStdin();
   const { write } = useStdout();
   const [fallbackInput, setFallbackInput] = useState('');
-  const [staticKey] = useState(0);
-  const [hasCleared, setHasCleared] = useState(false);
+  const [staticKey, setStaticKey] = useState(0);
+  const [hasInitialized, setHasInitialized] = useState(false);
+  
+  // Refresh static like gemini-cli
+  const refreshStatic = useCallback(() => {
+    write('\x1B[2J\x1B[3J\x1B[H');
+    setStaticKey(prev => prev + 1);
+  }, [write]);
   
   const { 
     session, 
@@ -46,13 +52,13 @@ export const ChatApp: React.FC = () => {
     }
   });
 
-  // Clear screen once on mount
+  // Initialize once on mount
   useEffect(() => {
-    if (!hasCleared && isRawModeSupported) {
-      write('\x1B[2J\x1B[3J\x1B[H');
-      setHasCleared(true);
+    if (!hasInitialized && isRawModeSupported) {
+      refreshStatic();
+      setHasInitialized(true);
     }
-  }, [hasCleared, isRawModeSupported, write]);
+  }, [hasInitialized, isRawModeSupported, refreshStatic]);
 
   useEffect(() => {
     // Ctrl+C または Ctrl+D で終了
@@ -133,61 +139,69 @@ export const ChatApp: React.FC = () => {
   const completedMessages = session.messages.filter(msg => msg.id !== 'streaming');
   const streamingMessage = session.messages.find(msg => msg.id === 'streaming');
 
-  return (
-    <Box flexDirection="column" flexGrow={1}>
-      {/* Static header */}
+  // Build static items array like gemini-cli
+  const staticItems = [
+    // Header section
+    <Box key="header" flexDirection="column">
       <Box borderStyle="single" borderColor="cyan" paddingX={1} width="100%">
         <Box flexGrow={1} justifyContent="center">
           <Text bold color="cyan">🐯 TIGER CONSOLE v1.0 🐯</Text>
         </Box>
       </Box>
-
-      {/* Dynamic status - outside of Static */}
-      {!session.isProcessing && (
+      {isConnected && (
         <Box marginY={1} paddingX={1}>
-          <Text dimColor>
-            {isConnected ? '⚡ Type your message or use /exit to quit' : '🔄 Connecting to Ollama...'}
+          <Text dimColor>⚡ Type your message or use /exit to quit</Text>
+        </Box>
+      )}
+    </Box>,
+    // Completed messages
+    ...completedMessages.map((message) => (
+      <Box key={message.id} flexDirection="column" marginBottom={1} paddingX={1}>
+        <Box>
+          <Text bold color={message.role === 'user' ? 'cyan' : 'green'}>
+            {message.role === 'user' ? 'You' : 'Tiger'}:
           </Text>
+        </Box>
+        <Box marginLeft={2}>
+          <Text>{message.content}</Text>
+        </Box>
+      </Box>
+    ))
+  ];
+
+  return (
+    <Box flexDirection="column" flexGrow={1}>
+      {/* Single Static component with all static content */}
+      <Static key={staticKey} items={staticItems}>
+        {(item) => item}
+      </Static>
+
+      {/* Dynamic content outside Static */}
+      {/* Connection status */}
+      {!isConnected && (
+        <Box paddingX={1}>
+          <Text dimColor>🔄 Connecting to Ollama...</Text>
         </Box>
       )}
 
-      {/* Task status - outside of Static */}
+      {/* Task status - dynamic */}
       {taskManager.tasks.length > 0 && (
         <Box paddingX={1}>
           <TaskStatus tasks={taskManager.tasks} currentAction={taskManager.currentAction} />
         </Box>
       )}
 
-      {/* Messages container with scroll */}
-      <Box flexDirection="column" flexGrow={1} overflow="hidden">
-        {/* Static messages - only completed ones */}
-        <Static key={staticKey} items={completedMessages}>
-          {(message) => (
-            <Box key={message.id} flexDirection="column" marginBottom={1} paddingX={1}>
-              <Box>
-                <Text bold color={message.role === 'user' ? 'cyan' : 'green'}>
-                  {message.role === 'user' ? 'You' : 'Tiger'}:
-                </Text>
-              </Box>
-              <Box marginLeft={2}>
-                <Text>{message.content}</Text>
-              </Box>
-            </Box>
-          )}
-        </Static>
-
-        {/* Streaming message - outside of Static */}
-        {streamingMessage && (
-          <Box flexDirection="column" marginBottom={1} paddingX={1}>
-            <Box>
-              <Text bold color="green">Tiger:</Text>
-            </Box>
-            <Box marginLeft={2}>
-              <Text>{streamingMessage.content}</Text>
-            </Box>
+      {/* Streaming message - dynamic */}
+      {streamingMessage && (
+        <Box flexDirection="column" marginBottom={1} paddingX={1}>
+          <Box>
+            <Text bold color="green">Tiger:</Text>
           </Box>
-        )}
-      </Box>
+          <Box marginLeft={2}>
+            <Text>{streamingMessage.content}</Text>
+          </Box>
+        </Box>
+      )}
 
       {/* Dynamic input area - this is NOT in Static */}
       <Box paddingX={1} marginTop={1}>
