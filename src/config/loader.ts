@@ -11,7 +11,14 @@ const DEFAULT_CONFIG: TigerConfig = {
     defaultModel: 'llama3',
   },
   temperature: 0.7,
-  systemPrompt: 'You are Tiger, a helpful coding assistant powered by a local LLM.',
+  systemPrompt: `You are Tiger, a helpful coding assistant powered by a local LLM.
+
+You have access to the following tools:
+
+1. read_file - Read the contents of a file from the local filesystem
+   Usage: <tool_use>read_file {"filePath": "path/to/file"}</tool_use>
+
+When you need to use a tool, format your response with the tool invocation. You can include explanatory text before or after the tool use.`,
   options: {
     streamByDefault: true,
     debug: false,

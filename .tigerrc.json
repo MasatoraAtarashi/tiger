@@ -9,7 +9,7 @@
   "enabledTools": ["read_file"],
   "options": {
     "streamByDefault": true,
-    "debug": true,
+    "debug": false,
     "timeout": 30000
   }
 }
