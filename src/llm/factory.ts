@@ -1,6 +1,7 @@
+import { TigerConfig } from '../config/types.js';
+
 import { OllamaProvider } from './providers/ollama.js';
 import { LLMProvider, LLMProviderConfig } from './types.js';
-import { TigerConfig } from '../config/types.js';
 
 export class LLMProviderFactory {
   static create(config: LLMProviderConfig, tigerConfig?: TigerConfig): LLMProvider {

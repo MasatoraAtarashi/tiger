@@ -1,9 +1,10 @@
 import { v4 as uuidv4 } from 'uuid';
 
-import { LLMProvider, LLMMessage, StreamEvent, ToolCall } from '../llm/types.js';
+import { LLMProvider, LLMMessage, StreamEvent } from '../llm/types.js';
 import { Tool } from '../tools/types.js';
 import { Message } from '../types.js';
 import { Logger } from '../utils/logger.js';
+
 import { ToolParser } from './tool-parser.js';
 
 interface ChatOptions {
@@ -84,8 +85,11 @@ export class Chat {
           if (tool) {
             try {
               this.logger.debug('Chat', `Executing tool: ${toolCall.name}`, toolCall.args);
-              const result = await tool.execute(toolCall.args);
-              const toolResult = ToolParser.formatToolResult(toolCall.name, result);
+              const results: unknown[] = [];
+              for await (const result of tool.execute(toolCall.args)) {
+                results.push(result);
+              }
+              const toolResult = ToolParser.formatToolResult(toolCall.name, results.length === 1 ? results[0] : results);
               
               // ツール実行結果をユーザーメッセージとして追加
               this.messages.push({
@@ -176,8 +180,11 @@ export class Chat {
               if (tool) {
                 try {
                   this.logger.debug('Chat', `Executing tool: ${toolCall.name}`, toolCall.args);
-                  const result = await tool.execute(toolCall.args);
-                  const toolResult = ToolParser.formatToolResult(toolCall.name, result);
+                  const results: unknown[] = [];
+                  for await (const result of tool.execute(toolCall.args)) {
+                    results.push(result);
+                  }
+                  const toolResult = ToolParser.formatToolResult(toolCall.name, results.length === 1 ? results[0] : results);
                   
                   // ツール実行結果をユーザーメッセージとして追加
                   this.messages.push({
@@ -222,65 +229,6 @@ export class Chat {
         }
       }
     }
-  }
-
-  // ツールを実行
-  private async executeTools(
-    toolCalls: ToolCall[],
-  ): Promise<Array<{ toolCallId: string; data: unknown }>> {
-    const results: Array<{ toolCallId: string; data: unknown }> = [];
-
-    for (const toolCall of toolCalls) {
-      const tool = this.tools.get(toolCall.name);
-      if (!tool) {
-        results.push({
-          toolCallId: toolCall.id,
-          data: { error: `Tool not found: ${toolCall.name}` },
-        });
-        continue;
-      }
-
-      // パラメータ検証
-      if (!tool.validateParams(toolCall.arguments)) {
-        results.push({
-          toolCallId: toolCall.id,
-          data: { error: `Invalid parameters for tool: ${toolCall.name}` },
-        });
-        continue;
-      }
-
-      try {
-        this.logger.debug('Chat', 'Executing tool', {
-          toolName: toolCall.name,
-          arguments: toolCall.arguments,
-        });
-
-        // ツール実行
-        const executeResult = tool.execute(toolCall.arguments);
-        const data: unknown[] = [];
-
-        for await (const result of executeResult) {
-          data.push(result);
-        }
-
-        results.push({
-          toolCallId: toolCall.id,
-          data: data.length === 1 ? data[0] : data,
-        });
-
-        this.logger.debug('Chat', 'Tool execution completed', {
-          toolName: toolCall.name,
-          resultCount: data.length,
-        });
-      } catch (error) {
-        results.push({
-          toolCallId: toolCall.id,
-          data: { error: error instanceof Error ? error.message : 'Unknown error' },
-        });
-      }
-    }
-
-    return results;
   }
 
   // 現在のメッセージ履歴を取得

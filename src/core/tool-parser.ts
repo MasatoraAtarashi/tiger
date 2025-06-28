@@ -15,9 +15,9 @@ export class ToolParser {
     
     while ((match = toolRegex.exec(content)) !== null) {
       try {
-        const name = match[1];
-        const argsStr = match[2];
-        const args = JSON.parse(argsStr);
+        const name = match[1]!;
+        const argsStr = match[2]!;
+        const args = JSON.parse(argsStr) as Record<string, unknown>;
         toolCalls.push({ name, args });
       } catch (error) {
         console.error('Failed to parse tool call:', error);
