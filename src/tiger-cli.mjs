@@ -1,0 +1,202 @@
+import React, { useState, useEffect } from 'react';
+import { render, Text, Box, useInput, useApp } from 'ink';
+import Spinner from 'ink-spinner';
+import { spawn } from 'child_process';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
+
+// ロガーインスタンスを作成
+let logger = null;
+
+// TypeScriptのtigerモジュールを動的にロード
+const runTigerChat = async (userInput, loggerInstance) => {
+  return new Promise((resolve) => {
+    const loggerParam = loggerInstance ? 'true' : 'false';
+    const child = spawn('npx', ['ts-node', '-e', `
+      const { tigerChat } = require('./src/tiger');
+      const { Logger } = require('./src/logger');
+      const logger = ${loggerParam} ? new Logger() : null;
+      tigerChat('${userInput.replace(/'/g, "\\'")}', logger)
+        .then(result => {
+          if (logger) {
+            result.logPath = logger.getLogFilePath();
+          }
+          console.log(JSON.stringify(result));
+        })
+        .catch(error => console.error(error));
+    `], { cwd: process.cwd() });
+    
+    let output = '';
+    child.stdout.on('data', (data) => {
+      output += data.toString();
+    });
+    
+    child.on('close', () => {
+      try {
+        const result = JSON.parse(output);
+        resolve(result);
+      } catch (error) {
+        resolve({
+          response: 'Error processing request',
+          logs: [{ type: 'error', message: error.toString() }]
+        });
+      }
+    });
+  });
+};
+
+const TigerCLI = () => {
+  const [messages, setMessages] = useState([
+    { role: 'system', content: '🐯 Welcome to Tiger - Your CLI Coding Agent!' },
+    { role: 'system', content: 'I can help you with file operations, shell commands, and more.' }
+  ]);
+  const [inputValue, setInputValue] = useState('');
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [toolLogs, setToolLogs] = useState([]);
+  const [currentLogPath, setCurrentLogPath] = useState(null);
+  const { exit } = useApp();
+  
+  // ロガーの初期化
+  useEffect(() => {
+    const initLogger = async () => {
+      try {
+        const { Logger } = await import('./logger.js');
+        logger = new Logger();
+        setCurrentLogPath(logger.getLogFilePath());
+        setMessages(prev => [...prev, {
+          role: 'system',
+          content: `📝 Session log: ${logger.getLogFilePath()}`
+        }]);
+      } catch (error) {
+        // ロガーが読み込めない場合は無視
+      }
+    };
+    initLogger();
+    
+    return () => {
+      if (logger) {
+        logger.close();
+      }
+    };
+  }, []);
+
+  const processUserInput = async (userInput) => {
+    setIsProcessing(true);
+    setToolLogs([]);
+    
+    try {
+      const result = await runTigerChat(userInput, logger);
+      
+      // ログを表示
+      if (result.logs) {
+        for (const log of result.logs) {
+          setToolLogs(prev => [...prev, log]);
+          await new Promise(resolve => setTimeout(resolve, 300));
+        }
+      }
+      
+      // レスポンスを追加
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: result.response 
+      }]);
+    } catch (error) {
+      setMessages(prev => [...prev, { 
+        role: 'assistant', 
+        content: `Error: ${error.message}` 
+      }]);
+    }
+    
+    setIsProcessing(false);
+  };
+
+  useInput((input, key) => {
+    if (key.escape || (key.ctrl && input === 'c')) {
+      exit();
+      return;
+    }
+
+    if (key.return) {
+      if (inputValue.trim()) {
+        const userMessage = inputValue.trim();
+        setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
+        processUserInput(userMessage);
+        setInputValue('');
+      }
+      return;
+    }
+
+    if (key.backspace || key.delete) {
+      setInputValue(prev => prev.slice(0, -1));
+      return;
+    }
+
+    if (input && !key.ctrl && !key.meta) {
+      setInputValue(prev => prev + input);
+    }
+  });
+
+  return React.createElement(Box, { flexDirection: 'column', padding: 1 },
+    // ヘッダー
+    React.createElement(Box, { borderStyle: 'round', borderColor: 'cyan', flexDirection: 'column', padding: 1 },
+      React.createElement(Text, { bold: true, color: 'cyan' }, '🐯 Tiger CLI Agent'),
+      React.createElement(Text, { color: 'gray' }, 'Powered by Ollama + Mastra')
+    ),
+    
+    // メッセージ履歴
+    React.createElement(Box, { flexDirection: 'column', marginTop: 1, minHeight: 10 },
+      messages.slice(-6).map((msg, index) => 
+        React.createElement(Box, { key: index, marginBottom: 1 },
+          React.createElement(Text, { 
+            color: msg.role === 'user' ? 'green' : msg.role === 'system' ? 'gray' : 'cyan',
+            wrap: 'wrap'
+          },
+            msg.role === 'user' ? '👤 You: ' : msg.role === 'system' ? '💻 ' : '🐯 Tiger: ',
+            msg.content
+          )
+        )
+      )
+    ),
+    
+    // ツールログ表示
+    isProcessing && toolLogs.length > 0 && React.createElement(Box, { 
+      borderStyle: 'classic', 
+      borderColor: 'yellow', 
+      padding: 1, 
+      marginTop: 1,
+      flexDirection: 'column'
+    },
+      React.createElement(Box, { marginBottom: toolLogs.length > 0 ? 1 : 0 },
+        React.createElement(Spinner, { type: 'dots' }),
+        React.createElement(Text, { color: 'yellow' }, ' Processing...')
+      ),
+      toolLogs.map((log, index) => 
+        React.createElement(Box, { key: index },
+          React.createElement(Text, { 
+            color: log.type === 'info' ? 'blue' : 
+                   log.type === 'tool' ? 'magenta' :
+                   log.type === 'exec' ? 'yellow' : 
+                   log.type === 'error' ? 'red' : 'green'
+          }, log.message)
+        )
+      )
+    ),
+    
+    // 入力フィールド
+    React.createElement(Box, { borderStyle: 'single', borderColor: 'green', padding: 1, marginTop: 1 },
+      React.createElement(Text, { color: 'green' },
+        isProcessing ? '⏳ Tiger is thinking...' : `> ${inputValue}█`
+      )
+    ),
+    
+    // ヘルプテキスト
+    React.createElement(Box, { marginTop: 1, flexDirection: 'column' },
+      React.createElement(Text, { dimColor: true }, 'Commands: "List files", "Read <filename>", "Run <command>"'),
+      React.createElement(Text, { dimColor: true }, 'Press ESC or Ctrl+C to exit'),
+      currentLogPath && React.createElement(Text, { dimColor: true }, `Log file: ${currentLogPath}`)
+    )
+  );
+};
+
+render(React.createElement(TigerCLI));

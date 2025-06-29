@@ -1,0 +1,5 @@
+{
+  "logDir": "~/.tiger/logs",
+  "logEnabled": true,
+  "logLevel": "info"
+}
