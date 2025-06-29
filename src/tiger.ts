@@ -43,10 +43,51 @@ ${inputParams}`;
 }
 
 // Ollamaにプロンプトを送信
-async function callOllama(prompt: string): Promise<string> {
+async function callOllama(prompt: string, logger?: Logger): Promise<string> {
   const command = `echo '${prompt.replace(/'/g, "'\\''")}' | ollama run gemma3:4b`;
-  const { stdout } = await execAsync(command);
-  return stdout.trim();
+  
+  if (logger) {
+    logger.log({
+      timestamp: new Date().toISOString(),
+      type: 'info',
+      message: 'Calling Ollama with prompt',
+      metadata: { promptLength: prompt.length }
+    });
+  }
+  
+  try {
+    const { stdout, stderr } = await execAsync(command);
+    
+    if (logger) {
+      logger.log({
+        timestamp: new Date().toISOString(),
+        type: 'info',
+        message: 'Ollama response received',
+        metadata: { 
+          responseLength: stdout.length,
+          response: stdout.substring(0, 500) + (stdout.length > 500 ? '...' : ''),
+          stderr: stderr || null
+        }
+      });
+    }
+    
+    return stdout.trim();
+  } catch (error: any) {
+    if (logger) {
+      logger.log({
+        timestamp: new Date().toISOString(),
+        type: 'error',
+        message: 'Ollama call failed',
+        metadata: { 
+          error: error.message,
+          command: command.substring(0, 200) + '...',
+          stderr: error.stderr,
+          stdout: error.stdout
+        }
+      });
+    }
+    throw error;
+  }
 }
 
 // レスポンスからJSONを抽出
@@ -81,7 +122,17 @@ export async function tigerChat(userInput: string, logger?: Logger): Promise<{
   }
   
   // Ollamaに送信
-  const ollamaResponse = await callOllama(fullPrompt);
+  let ollamaResponse: string;
+  try {
+    ollamaResponse = await callOllama(fullPrompt, logger);
+  } catch (error: any) {
+    logs.push({ type: 'error', message: `Ollama error: ${error.message}` });
+    return {
+      response: `Failed to connect to Ollama: ${error.message}`,
+      logs
+    };
+  }
+  
   const parsed = extractJson(ollamaResponse);
   
   if (!parsed) {
@@ -124,7 +175,17 @@ Tool ${parsed.tool} was executed with result: ${JSON.stringify(toolResult)}
 
 Please provide a final answer based on this result.`;
       
-      const finalResponse = await callOllama(resultPrompt);
+      let finalResponse: string;
+      try {
+        finalResponse = await callOllama(resultPrompt, logger);
+      } catch (error: any) {
+        logs.push({ type: 'error', message: `Ollama error on final response: ${error.message}` });
+        return {
+          response: `Tool executed but failed to get final response: ${error.message}`,
+          logs
+        };
+      }
+      
       const finalParsed = extractJson(finalResponse);
       
       if (finalParsed && finalParsed.answer) {

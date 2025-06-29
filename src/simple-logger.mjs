@@ -31,8 +31,19 @@ export class SimpleLogger {
     fs.writeFileSync(this.logFilePath, header);
   }
 
-  log(type, message, metadata = null) {
-    const timestamp = new Date().toISOString();
+  log(typeOrEntry, message, metadata = null) {
+    // オブジェクトとして渡された場合の処理
+    if (typeof typeOrEntry === 'object' && typeOrEntry !== null) {
+      const { type, message: msg, metadata: meta, timestamp } = typeOrEntry;
+      this.writeLog(timestamp || new Date().toISOString(), type, msg, meta);
+      return;
+    }
+    
+    // 従来の引数形式の処理
+    this.writeLog(new Date().toISOString(), typeOrEntry, message, metadata);
+  }
+  
+  writeLog(timestamp, type, message, metadata = null) {
     const typeEmoji = {
       info: 'ℹ️ ',
       tool: '🔧',
@@ -51,6 +62,22 @@ export class SimpleLogger {
     }
 
     fs.appendFileSync(this.logFilePath, logLine + '\n');
+  }
+  
+  logUserInput(input) {
+    this.log('user', input);
+  }
+
+  logAssistantResponse(response) {
+    this.log('assistant', response);
+  }
+
+  logToolExecution(toolName, args, result) {
+    this.log('tool', `Executing tool: ${toolName}`, { args, result });
+  }
+
+  logError(error) {
+    this.log('error', error.message || String(error), error.stack ? { stack: error.stack } : undefined);
   }
 
   getLogFilePath() {

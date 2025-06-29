@@ -15,11 +15,18 @@ const runTigerChat = async (userInput) => {
   return new Promise((resolve) => {
     const child = spawn('npx', ['ts-node', '-e', `
       const { tigerChat } = require('./src/tiger');
-      tigerChat('${userInput.replace(/'/g, "\\'")}'))
+      const { Logger } = require('./src/logger');
+      const logger = new Logger();
+      
+      tigerChat('${userInput.replace(/'/g, "\\'")}', logger)
         .then(result => {
           console.log(JSON.stringify(result));
+          logger.close();
         })
-        .catch(error => console.error(error));
+        .catch(error => {
+          console.error(JSON.stringify({ error: error.message || error.toString() }));
+          logger.close();
+        });
     `], { cwd: process.cwd() });
     
     let output = '';
@@ -27,11 +34,32 @@ const runTigerChat = async (userInput) => {
       output += data.toString();
     });
     
-    child.on('close', () => {
+    child.stderr.on('data', (data) => {
+      logger.log('error', `Process stderr: ${data.toString()}`);
+    });
+    
+    child.on('close', (code) => {
       try {
-        const result = JSON.parse(output);
-        resolve(result);
+        if (output.trim()) {
+          const parsedOutput = JSON.parse(output);
+          if (parsedOutput.error) {
+            logger.log('error', `Child process error: ${parsedOutput.error}`);
+            resolve({
+              response: parsedOutput.error,
+              logs: [{ type: 'error', message: parsedOutput.error }]
+            });
+          } else {
+            resolve(parsedOutput);
+          }
+        } else {
+          logger.log('error', `No output from child process, exit code: ${code}`);
+          resolve({
+            response: 'Error processing request',
+            logs: [{ type: 'error', message: 'No output from process' }]
+          });
+        }
       } catch (error) {
+        logger.log('error', `Failed to parse output: ${error.message}`, { output });
         resolve({
           response: 'Error processing request',
           logs: [{ type: 'error', message: error.toString() }]
