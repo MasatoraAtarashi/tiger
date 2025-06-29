@@ -2,26 +2,21 @@ import React, { useState, useEffect } from 'react';
 import { render, Text, Box, useInput, useApp } from 'ink';
 import Spinner from 'ink-spinner';
 import { spawn } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import os from 'os';
+import { SimpleLogger } from './simple-logger.mjs';
 
 // ロガーインスタンスを作成
-let logger = null;
+const logger = new SimpleLogger();
 
 // TypeScriptのtigerモジュールを動的にロード
-const runTigerChat = async (userInput, loggerInstance) => {
+const runTigerChat = async (userInput) => {
+  // ユーザー入力をログに記録
+  logger.log('user', userInput);
+  
   return new Promise((resolve) => {
-    const loggerParam = loggerInstance ? 'true' : 'false';
     const child = spawn('npx', ['ts-node', '-e', `
       const { tigerChat } = require('./src/tiger');
-      const { Logger } = require('./src/logger');
-      const logger = ${loggerParam} ? new Logger() : null;
-      tigerChat('${userInput.replace(/'/g, "\\'")}', logger)
+      tigerChat('${userInput.replace(/'/g, "\\'")}'))
         .then(result => {
-          if (logger) {
-            result.logPath = logger.getLogFilePath();
-          }
           console.log(JSON.stringify(result));
         })
         .catch(error => console.error(error));
@@ -59,25 +54,14 @@ const TigerCLI = () => {
   
   // ロガーの初期化
   useEffect(() => {
-    const initLogger = async () => {
-      try {
-        const { Logger } = await import('./logger.js');
-        logger = new Logger();
-        setCurrentLogPath(logger.getLogFilePath());
-        setMessages(prev => [...prev, {
-          role: 'system',
-          content: `📝 Session log: ${logger.getLogFilePath()}`
-        }]);
-      } catch (error) {
-        // ロガーが読み込めない場合は無視
-      }
-    };
-    initLogger();
+    setCurrentLogPath(logger.getLogFilePath());
+    setMessages(prev => [...prev, {
+      role: 'system',
+      content: `📝 Session log: ${logger.getLogFilePath()}`
+    }]);
     
     return () => {
-      if (logger) {
-        logger.close();
-      }
+      logger.close();
     };
   }, []);
 
@@ -86,12 +70,14 @@ const TigerCLI = () => {
     setToolLogs([]);
     
     try {
-      const result = await runTigerChat(userInput, logger);
+      const result = await runTigerChat(userInput);
       
       // ログを表示
       if (result.logs) {
         for (const log of result.logs) {
           setToolLogs(prev => [...prev, log]);
+          // ツールログも記録
+          logger.log(log.type, log.message);
           await new Promise(resolve => setTimeout(resolve, 300));
         }
       }
@@ -101,11 +87,15 @@ const TigerCLI = () => {
         role: 'assistant', 
         content: result.response 
       }]);
+      // アシスタントの応答をログに記録
+      logger.log('assistant', result.response);
     } catch (error) {
       setMessages(prev => [...prev, { 
         role: 'assistant', 
         content: `Error: ${error.message}` 
       }]);
+      // エラーをログに記録
+      logger.log('error', error.message);
     }
     
     setIsProcessing(false);
