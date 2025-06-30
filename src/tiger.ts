@@ -229,17 +229,21 @@ Based on what you've done so far, what should you do next to complete the user's
 ` : ''}
 
 Analyze this request and decide what action to take.
-If you need to use a tool, respond with ONLY a JSON object like:
+You MUST respond with ONLY ONE of these JSON formats:
+
+1. To use a tool:
 {"tool": "tool_name", "args": {"key": "value"}}
 
-If the task is complete or you just need to provide information, respond with ONLY:
-{"response": "your response here"}
+2. When task is complete:
+{"response": "your final response here"}
+
+Remember: Output ONLY valid JSON, nothing else.
 
 Available tools:
-- ls: List directory contents. Use this for listing files. Args: {"path": "./"}
-- read_file: Read a file content. Args: {"path": "file.txt"}
-- write_file: Write/create a file. Args: {"path": "file.txt", "content": "content"}
-- shell: Execute shell commands. Args: {"command": "echo hello"}
+- ls: List directory contents. Example: {"tool": "ls", "args": {"path": "./"}}
+- read_file: Read a file content. Example: {"tool": "read_file", "args": {"path": "file.txt"}}
+- write_file: Write/create a file. Example: {"tool": "write_file", "args": {"path": "file.txt", "content": "file content here"}}
+- shell: Execute shell commands. Example: {"tool": "shell", "args": {"command": "echo hello"}}
 
 IMPORTANT: 
 1. Respond with ONLY JSON, nothing else.
