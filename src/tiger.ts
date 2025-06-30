@@ -239,7 +239,7 @@ Available tools:
 - ls: List directory contents. Use this for listing files. Args: {"path": "./"}
 - read_file: Read a file content. Args: {"path": "file.txt"}
 - write_file: Write/create a file. Args: {"path": "file.txt", "content": "content"}
-- run_command: Execute shell commands. Args: {"command": "echo hello"}
+- shell: Execute shell commands. Args: {"command": "echo hello"}
 
 IMPORTANT: 
 1. Respond with ONLY JSON, nothing else.
@@ -305,7 +305,7 @@ IMPORTANT:
       logs.push({ type: 'tool', message: `🔧 Selected tool: ${parsed.tool}` });
       
       // 確認が必要な場合
-      if (!skipConfirmation && (parsed.tool === 'write_file' || parsed.tool === 'run_command')) {
+      if (!skipConfirmation && (parsed.tool === 'write_file' || parsed.tool === 'shell')) {
         logs.push({ type: 'confirm', message: `⚠️ Tool execution requires confirmation: ${parsed.tool}` });
         return {
           response: 'Tool execution request',
