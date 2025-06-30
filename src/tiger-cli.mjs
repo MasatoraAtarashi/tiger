@@ -13,17 +13,17 @@ const runTigerChat = async (userInput) => {
   logger.log('user', userInput);
   
   return new Promise((resolve) => {
-    const child = spawn('npx', ['ts-node', '-e', `
+    const child = spawn('npx', ['ts-node', '--transpile-only', '-e', `
       const { tigerChat } = require('./src/tiger');
       const { Logger } = require('./src/logger');
       const logger = new Logger();
       
       tigerChat('${userInput.replace(/'/g, "\\'")}', logger)
-        .then(result => {
+        .then((result) => {
           console.log(JSON.stringify(result));
           logger.close();
         })
-        .catch(error => {
+        .catch((error) => {
           console.error(JSON.stringify({ error: error.message || error.toString() }));
           logger.close();
         });

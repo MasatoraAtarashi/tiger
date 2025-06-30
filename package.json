@@ -1,0 +1,36 @@
+{
+  "name": "tiger-cli",
+  "version": "0.1.0",
+  "description": "Tiger - A powerful CLI coding agent powered by Ollama",
+  "main": "src/tiger.ts",
+  "bin": {
+    "tiger": "./src/tiger-cli.mjs"
+  },
+  "scripts": {
+    "start": "node src/tiger-cli.mjs",
+    "dev": "ts-node src/tiger.ts",
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["cli", "agent", "ollama", "ai", "coding", "assistant"],
+  "author": "Your Name",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/yourusername/tiger-cli.git"
+  },
+  "dependencies": {
+    "@mastra/core": "^0.10.8",
+    "@types/ink": "^0.5.2",
+    "@types/node": "^24.0.7",
+    "@types/react": "^18.3.23",
+    "fast-glob": "^3.3.3",
+    "ink": "^6.0.1",
+    "ink-spinner": "^5.0.0",
+    "react": "^19.1.0",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.8.3",
+    "zod": "^3.25.67"
+  }
+}
