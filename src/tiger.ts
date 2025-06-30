@@ -1,7 +1,25 @@
 import { tools as availableTools } from './tools';
 import { Logger } from './logger';
 import { execSync } from 'child_process';
-import { loadConfig } from './config';
+
+// config.tsを安全に読み込む
+let loadConfig: any;
+try {
+  const configModule = require('./config');
+  loadConfig = configModule.loadConfig;
+} catch {
+  // config.tsが利用できない場合のフォールバック
+  loadConfig = () => ({
+    model: 'llama3.2:3b',
+    timeout: 60000,
+    maxIterations: 10,
+    temperature: 0.7,
+    contextSize: 128000,
+    logDir: '~/.tiger/logs',
+    logEnabled: true,
+    logLevel: 'info' as const
+  });
+}
 
 // Ollamaを呼び出す関数
 async function callOllama(prompt: string, logger?: Logger, model?: string): Promise<string> {

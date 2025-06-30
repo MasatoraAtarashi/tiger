@@ -40,20 +40,21 @@ const MODEL_CONTEXT_SIZES: { [key: string]: number } = {
 const CONFIG_FILE_PATH = path.join(os.homedir(), '.tiger', 'config.json');
 
 export function loadConfig(): TigerConfig {
-  // まず環境変数から設定を読み込む
-  const envConfig: Partial<TigerConfig> = {};
-  if (process.env.TIGER_MODEL) {
-    envConfig.model = process.env.TIGER_MODEL;
-  }
-  if (process.env.TIGER_TIMEOUT) {
-    envConfig.timeout = parseInt(process.env.TIGER_TIMEOUT, 10);
-  }
-  if (process.env.TIGER_MAX_ITERATIONS) {
-    envConfig.maxIterations = parseInt(process.env.TIGER_MAX_ITERATIONS, 10);
-  }
-  if (process.env.TIGER_TEMPERATURE) {
-    envConfig.temperature = parseFloat(process.env.TIGER_TEMPERATURE);
-  }
+  try {
+    // まず環境変数から設定を読み込む
+    const envConfig: Partial<TigerConfig> = {};
+    if (process.env.TIGER_MODEL) {
+      envConfig.model = process.env.TIGER_MODEL;
+    }
+    if (process.env.TIGER_TIMEOUT) {
+      envConfig.timeout = parseInt(process.env.TIGER_TIMEOUT, 10);
+    }
+    if (process.env.TIGER_MAX_ITERATIONS) {
+      envConfig.maxIterations = parseInt(process.env.TIGER_MAX_ITERATIONS, 10);
+    }
+    if (process.env.TIGER_TEMPERATURE) {
+      envConfig.temperature = parseFloat(process.env.TIGER_TEMPERATURE);
+    }
 
   // 設定ファイルから読み込む
   let fileConfig = {};
@@ -87,7 +88,12 @@ export function loadConfig(): TigerConfig {
     mergedConfig.contextSize = MODEL_CONTEXT_SIZES[mergedConfig.model];
   }
   
-  return mergedConfig;
+    return mergedConfig;
+  } catch (error) {
+    // エラーが発生した場合はデフォルト設定を返す
+    console.warn('Failed to load config, using defaults:', error);
+    return DEFAULT_CONFIG;
+  }
 }
 
 // モデルのコンテキストサイズを取得

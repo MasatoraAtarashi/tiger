@@ -5,7 +5,6 @@ import { render, Text, Box, useInput, useApp } from 'ink';
 import Spinner from 'ink-spinner';
 import { spawn } from 'child_process';
 import { SimpleLogger } from './simple-logger.mjs';
-import { loadConfig } from './config.js';
 
 // ロガーインスタンスを作成
 const logger = new SimpleLogger();
@@ -132,14 +131,56 @@ const TigerCLI = () => {
   useEffect(() => {
     setCurrentLogPath(logger.getLogFilePath());
     
-    // 設定を読み込む
-    const loadedConfig = loadConfig();
-    setConfig(loadedConfig);
+    // 設定を読み込む（TypeScriptモジュールを動的にロード）
+    const loadConfigAsync = async () => {
+      try {
+        const configModule = await new Promise((resolve) => {
+          const child = spawn('npx', ['ts-node', '--transpile-only', '-e', `
+            const { loadConfig } = require('./src/config');
+            const config = loadConfig();
+            console.log(JSON.stringify(config));
+          `], { cwd: process.cwd() });
+          
+          let output = '';
+          child.stdout.on('data', (data) => {
+            output += data.toString();
+          });
+          
+          child.on('close', () => {
+            try {
+              resolve(JSON.parse(output));
+            } catch {
+              // エラーの場合はデフォルト設定を使用
+              resolve({
+                model: 'llama3.2:3b',
+                timeout: 60000,
+                maxIterations: 10,
+                contextSize: 128000
+              });
+            }
+          });
+        });
+        
+        setConfig(configModule);
+        
+        // コンテキストサイズを設定
+        if (configModule && configModule.contextSize) {
+          setContextUsage(prev => ({ ...prev, total: configModule.contextSize }));
+        }
+      } catch (error) {
+        // エラーの場合はデフォルト設定
+        const defaultConfig = {
+          model: 'llama3.2:3b',
+          timeout: 60000,
+          maxIterations: 10,
+          contextSize: 128000
+        };
+        setConfig(defaultConfig);
+        setContextUsage(prev => ({ ...prev, total: defaultConfig.contextSize }));
+      }
+    };
     
-    // コンテキストサイズを設定
-    if (loadedConfig && loadedConfig.contextSize) {
-      setContextUsage(prev => ({ ...prev, total: loadedConfig.contextSize }));
-    }
+    loadConfigAsync();
     
     // VERSIONファイルからコミットハッシュを取得
     const getCommitHash = () => {
