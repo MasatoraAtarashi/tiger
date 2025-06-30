@@ -1,5 +1,6 @@
 import { MemoryManager } from './memory';
 import { Logger } from './logger';
+import { HistoryManager } from './history-manager';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { execSync } from 'child_process';
@@ -14,6 +15,7 @@ export interface SlashCommand {
 export interface CommandContext {
   currentDir: string;
   memoryManager: MemoryManager;
+  historyManager?: HistoryManager;
   logger?: Logger;
   config?: any;
 }
@@ -137,6 +139,46 @@ ${memories}`
         return {
           success: false,
           message: 'Model switching not yet implemented'
+        };
+      }
+    });
+
+    // History command
+    this.register({
+      name: 'history',
+      description: 'Show chat history',
+      handler: async (args, context) => {
+        if (!context.historyManager) {
+          return {
+            success: false,
+            message: 'History manager not available'
+          };
+        }
+
+        const count = args[0] ? parseInt(args[0]) : 10;
+        const detailed = args.includes('-v') || args.includes('--verbose');
+        
+        if (args[0] === 'clear') {
+          await context.historyManager.clear();
+          return {
+            success: true,
+            message: '🗑️ History cleared'
+          };
+        }
+        
+        if (args[0] === 'search' && args[1]) {
+          const query = args.slice(1).join(' ');
+          const results = context.historyManager.search(query);
+          return {
+            success: true,
+            message: context.historyManager.formatHistory(results, detailed)
+          };
+        }
+        
+        const history = context.historyManager.getRecent(count);
+        return {
+          success: true,
+          message: context.historyManager.formatHistory(history, detailed)
         };
       }
     });

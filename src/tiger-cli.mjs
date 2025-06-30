@@ -44,8 +44,37 @@ const TIGER_ASCII_LINES = [
 //   return text;
 // };
 
+// MessageProcessorとHistoryManagerのインスタンス
+let messageProcessor = null;
+let historyManager = null;
+
+// 初期化関数
+const initializeManagers = async () => {
+  try {
+    const { MessageProcessor } = await import('./message-processor.js');
+    const { HistoryManager } = await import('./history-manager.js');
+    
+    messageProcessor = new MessageProcessor();
+    historyManager = new HistoryManager();
+    await historyManager.initialize();
+  } catch (err) {
+    console.error('Failed to initialize managers:', err);
+  }
+};
+
 // TypeScriptのtigerモジュールを動的にロード
 const runTigerChat = async (userInput, skipConfirmation = false) => {
+  // メッセージを処理（@ファイル指定を展開）
+  let processedInput = userInput;
+  if (messageProcessor) {
+    try {
+      const processed = await messageProcessor.processMessage(userInput, process.cwd());
+      processedInput = processed.content;
+    } catch (err) {
+      console.error('Message processing error:', err);
+    }
+  }
+  
   // ユーザー入力をログに記録
   logger.log('user', userInput);
 
@@ -55,7 +84,7 @@ const runTigerChat = async (userInput, skipConfirmation = false) => {
       const { Logger } = require('./src/logger');
       const logger = new Logger();
       
-      tigerChat('${userInput.replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r')}', logger, ${skipConfirmation})
+      tigerChat('${processedInput.replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r')}', logger, ${skipConfirmation})
         .then((result) => {
           console.log(JSON.stringify(result));
           logger.close();
@@ -187,6 +216,9 @@ const TigerCLI = () => {
       }
     };
 
+    // マネージャーを初期化
+    initializeManagers();
+    
     // ロゴを表示してからメッセージを追加
     global.setTimeout(() => {
       setShowLogo(false);
@@ -194,8 +226,9 @@ const TigerCLI = () => {
       setMessages([
         { role: 'system', content: 'Tips for getting started:' },
         { role: 'system', content: '• Ask questions, edit files, or run commands' },
-        { role: 'system', content: '• Be specific for the best results' },
+        { role: 'system', content: '• Use @filename to include file contents' },
         { role: 'system', content: '• Type /help for more information' },
+        { role: 'system', content: '• Type /history to view chat history' },
         { role: 'system', content: '' },
         { role: 'system', content: `Version ${commitHash} • /quit to exit` }
       ]);
@@ -252,6 +285,27 @@ const TigerCLI = () => {
       }]);
       // アシスタントの応答をログに記録
       logger.log('assistant', result.response);
+      
+      // 履歴に記録
+      if (historyManager) {
+        const toolsUsed = result.logs
+          ?.filter(log => log.type === 'tool')
+          ?.map(log => log.message.match(/Using tool: (\w+)/)?.[1])
+          ?.filter(Boolean) || [];
+          
+        const filesModified = result.logs
+          ?.filter(log => log.type === 'success' && log.message.includes('File'))
+          ?.map(log => log.message.match(/File (\S+)/)?.[1])
+          ?.filter(Boolean) || [];
+        
+        await historyManager.addEntry({
+          timestamp: new Date().toISOString(),
+          user: userInput,
+          assistant: result.response,
+          toolsUsed,
+          filesModified
+        });
+      }
 
       // コンテキスト使用量を更新
       if (result.contextInfo) {
@@ -358,9 +412,72 @@ const TigerCLI = () => {
       if (inputValue.trim()) {
         const userMessage = inputValue.trim();
 
-        // /quitコマンドのチェック
-        if (userMessage.toLowerCase() === '/quit') {
-          exit();
+        // スラッシュコマンドのチェック
+        if (userMessage.startsWith('/')) {
+          // /quitコマンド
+          if (userMessage.toLowerCase() === '/quit') {
+            exit();
+            return;
+          }
+          
+          // /historyコマンド
+          if (userMessage.toLowerCase().startsWith('/history')) {
+            if (historyManager) {
+              const args = userMessage.split(' ').slice(1);
+              let historyOutput = '';
+              
+              if (args[0] === 'clear') {
+                await historyManager.clear();
+                historyOutput = '🗑️ History cleared';
+              } else if (args[0] === 'search' && args[1]) {
+                const query = args.slice(1).join(' ');
+                const results = historyManager.search(query);
+                historyOutput = historyManager.formatHistory(results, args.includes('-v'));
+              } else {
+                const count = args[0] ? parseInt(args[0]) : 10;
+                const history = historyManager.getRecent(count);
+                historyOutput = historyManager.formatHistory(history, args.includes('-v'));
+              }
+              
+              setMessages(prev => [...prev, 
+                { role: 'user', content: userMessage },
+                { role: 'system', content: historyOutput }
+              ]);
+              setInputValue('');
+              return;
+            }
+          }
+          
+          // /helpコマンド
+          if (userMessage.toLowerCase() === '/help') {
+            const helpText = `🐯 Tiger Commands
+
+Built-in Commands:
+  /help - Show this help message
+  /history [count] - Show recent chat history (default: 10)
+  /history search <query> - Search in chat history
+  /history clear - Clear chat history
+  /history -v - Show detailed history with tools used
+  /quit - Exit Tiger
+
+Tips:
+  • Use @filename to include file contents in your message
+  • Example: "Read this file @src/index.js"`;
+            
+            setMessages(prev => [...prev,
+              { role: 'user', content: userMessage },
+              { role: 'system', content: helpText }
+            ]);
+            setInputValue('');
+            return;
+          }
+          
+          // 不明なコマンド
+          setMessages(prev => [...prev,
+            { role: 'user', content: userMessage },
+            { role: 'system', content: `Unknown command: ${userMessage}. Type /help for available commands.` }
+          ]);
+          setInputValue('');
           return;
         }
 

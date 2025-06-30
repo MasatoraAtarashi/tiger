@@ -33,6 +33,14 @@ tiger
 > package.jsonを読んで
 > hello.txtというファイルを作成して
 > npm testを実行して
+
+# ファイルを含めてメッセージを送信
+> このコードをレビューして @src/index.js @package.json
+
+# 過去の会話履歴を確認
+> /history 20
+> /history search エラー
+> /history -v
 ```
 
 ### 実装されている機能
@@ -60,12 +68,18 @@ tiger
 - **/help** - 利用可能なコマンドを表示
 - **/clear** - 会話をクリア
 - **/quit** - Tigerを終了
+- **/history [count]** - 最近のチャット履歴を表示（デフォルト: 10件）
+- **/history search <query>** - チャット履歴を検索
+- **/history clear** - チャット履歴をクリア
+- **/history -v** - 詳細な履歴（使用ツール含む）を表示
 - **/memory [user|project]** - メモリファイルを編集
 - **/init** - プロジェクトメモリを初期化
 - **/status** - 現在のステータスを表示
 - **/model** - 使用中のモデルを表示
 
 #### その他の機能
+- 📎 **@ファイル指定** - メッセージに`@filename`でファイル内容を含める
+- 📜 **チャット履歴** - 過去の会話履歴を保存・検索（~/.tiger/history.json）
 - 🧠 プロジェクト・ユーザーレベルのメモリ管理（TIGER.md）
 - 📝 詳細なログ記録（~/.tiger/logs/）
 - 🎨 カラフルなインタラクティブUI
