@@ -4,10 +4,10 @@
   "description": "Tiger - A powerful CLI coding agent powered by Ollama",
   "main": "src/tiger.ts",
   "bin": {
-    "tiger": "./src/tiger-cli.mjs"
+    "tiger": "./dist/tiger-cli.js"
   },
   "scripts": {
-    "start": "node src/tiger-cli.mjs",
+    "start": "npm run build && node dist/tiger-cli.js",
     "dev": "ts-node src/tiger.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
@@ -45,9 +45,10 @@
     "@mastra/core": "^0.10.8",
     "@types/ink": "^0.5.2",
     "@types/node": "^24.0.7",
-    "@types/react": "^18.3.23",
+    "@types/react": "^19.0.0",
     "fast-glob": "^3.3.3",
     "ink": "^6.0.1",
+    "ink-select-input": "^6.2.0",
     "ink-spinner": "^5.0.0",
     "react": "^19.1.0",
     "ts-node": "^10.9.2",

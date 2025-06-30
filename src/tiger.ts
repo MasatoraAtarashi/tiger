@@ -196,7 +196,8 @@ interface ExecutionStep {
 export async function tigerChat(
   userInput: string, 
   logger?: Logger,
-  skipConfirmation: boolean = false
+  skipConfirmation: boolean = false,
+  memory?: string
 ): Promise<ChatResult> {
   const config = loadConfig();
   const logs: ChatLog[] = [];
@@ -210,7 +211,7 @@ export async function tigerChat(
   // 実行ループ
   for (let iteration = 0; iteration < maxIterations; iteration++) {
     let prompt = `You are Tiger, a helpful coding assistant powered by Ollama and Mastra tools.
-
+${memory ? `\nProject Context:\n${memory}\n` : ''}
 User request: ${userInput}
 
 ${executionHistory.length > 0 ? `
