@@ -1,6 +1,6 @@
 # Tiger CLI 🐯
 
-![Tiger CLI](./screenshot.png)
+![Tiger CLI](https://raw.githubusercontent.com/MasatoraAtarashi/tiger/main/screenshot.png)
 
 ローカルLLMを使用したパワフルなコーディングエージェント。自然言語でコーディングタスクを実行できます。
 
@@ -19,7 +19,7 @@ curl -fsSL https://ollama.ai/install.sh | sh
 ollama pull llama3.2:3b
 
 # Tigerをインストール
-npm install -g tiger-cli
+npm install -g @truetiger/tiger
 ```
 
 ## 使い方

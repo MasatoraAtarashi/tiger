@@ -1,6 +1,6 @@
 {
-  "name": "tiger-cli",
-  "version": "0.1.0",
+  "name": "@truetiger/tiger",
+  "version": "0.1.1",
   "description": "Tiger - A powerful CLI coding agent powered by Ollama",
   "main": "src/tiger.ts",
   "bin": {
