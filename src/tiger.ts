@@ -51,13 +51,18 @@ async function callOllama(prompt: string, logger?: Logger, model?: string): Prom
     
     // ANSIエスケープシーケンスを除去
     let cleanOutput = stdout
-                      // ANSIエスケープシーケンスを除去
-                      .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
+                      // 全てのESC文字を除去
+                      .replace(/\x1b/g, '')
+                      .replace(/\u001b/g, '')
+                      // 残りのANSIエスケープシーケンスを除去
+                      .replace(/\[[0-9;]*[a-zA-Z]/g, '')
                       .replace(/\[\?[0-9;]*[a-zA-Z]/g, '')
                       .replace(/\[([0-9]+)([A-K])/g, '')
                       // プログレスインジケーターを除去
                       .replace(/⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏/g, '')
-                      .replace(/\r/g, '\n');
+                      .replace(/\r/g, '\n')
+                      // 制御文字の後に続く可視文字以外を除去
+                      .replace(/\?[0-9;]*[a-zA-Z]/g, '');
     
     // JSONオブジェクトを抽出する
     const jsonMatch = cleanOutput.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/);
@@ -259,6 +264,19 @@ IMPORTANT:
     
     logs.push({ type: 'info', message: '🔍 Parsing AI response...' });
     const parsed = extractJson(ollamaResponse);
+    
+    // デバッグ: パース結果をログに記録
+    if (logger) {
+      logger.log({
+        timestamp: new Date().toISOString(),
+        type: 'debug',
+        message: 'JSON parse result',
+        metadata: { 
+          parsed: parsed,
+          ollamaResponse: ollamaResponse.substring(0, 200)
+        }
+      });
+    }
     
     if (!parsed) {
       // JSONが抽出できない場合は、レスポンスをそのまま返す
