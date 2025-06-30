@@ -4,7 +4,7 @@ import { loadConfig, ensureLogDirectory } from './config';
 
 export interface LogEntry {
   timestamp: string;
-  type: 'info' | 'tool' | 'exec' | 'error' | 'success' | 'user' | 'assistant';
+  type: 'info' | 'tool' | 'exec' | 'error' | 'success' | 'user' | 'assistant' | 'ollama_call' | 'ollama_response' | 'tool_execution' | 'tool_result';
   message: string;
   metadata?: any;
 }
@@ -54,7 +54,11 @@ export class Logger {
       error: '❌',
       success: '✅',
       user: '👤',
-      assistant: '🐯'
+      assistant: '🐯',
+      ollama_call: '🤖',
+      ollama_response: '💬',
+      tool_execution: '🔨',
+      tool_result: '📊'
     };
 
     const prefix = `[${entry.timestamp}] ${typeEmoji[entry.type] || '📝'} [${entry.type.toUpperCase()}]`;

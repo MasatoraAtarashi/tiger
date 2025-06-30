@@ -1,25 +1,9 @@
-import { tools as availableTools } from './tools';
+import { createToolRegistry } from './tools';
 import { Logger } from './logger';
+import { loadConfig } from './config';
 import { execSync } from 'child_process';
 
-// config.tsを安全に読み込む
-let loadConfig: any;
-try {
-  const configModule = require('./config');
-  loadConfig = configModule.loadConfig;
-} catch {
-  // config.tsが利用できない場合のフォールバック
-  loadConfig = () => ({
-    model: 'llama3.2:3b',
-    timeout: 60000,
-    maxIterations: 10,
-    temperature: 0.7,
-    contextSize: 128000,
-    logDir: '~/.tiger/logs',
-    logEnabled: true,
-    logLevel: 'info' as const
-  });
-}
+const availableTools = createToolRegistry();
 
 // Ollamaを呼び出す関数
 async function callOllama(prompt: string, logger?: Logger, model?: string): Promise<string> {
@@ -121,7 +105,7 @@ function extractJson(response: string): any {
 
 // ツールを実行する
 async function executeTool(toolName: string, args: any, logger?: Logger): Promise<any> {
-  const tool = availableTools.find(t => t.name === toolName);
+  const tool = availableTools[toolName];
   if (!tool) {
     throw new Error(`Tool "${toolName}" not found`);
   }
