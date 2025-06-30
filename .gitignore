@@ -43,8 +43,10 @@ lerna-debug.log*
 # Testing
 coverage/
 .nyc_output/
+integration-tests/test-runs/
 
 # Misc
 .cache/
 .temp/
 tmp/
+.eslintcache

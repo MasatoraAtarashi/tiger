@@ -2,6 +2,7 @@
   "name": "tiger-cli",
   "version": "0.1.0",
   "description": "Tiger - A powerful CLI coding agent powered by Ollama",
+  "type": "module",
   "main": "src/tiger.ts",
   "bin": {
     "tiger": "./src/tiger-cli.mjs"
@@ -11,6 +12,8 @@
     "dev": "ts-node src/tiger.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
+    "lint": "eslint src --ext .ts,.tsx,.js,.mjs --fix",
+    "lint:check": "eslint src --ext .ts,.tsx,.js,.mjs",
     "test": "node integration-tests/run-tests.js",
     "test:verbose": "node integration-tests/run-tests.js --verbose",
     "test:keep-output": "node integration-tests/run-tests.js --keep-output",
@@ -25,7 +28,14 @@
     "version": "git rev-parse --short HEAD > src/VERSION",
     "precommit": "npm run version"
   },
-  "keywords": ["cli", "agent", "ollama", "ai", "coding", "assistant"],
+  "keywords": [
+    "cli",
+    "agent",
+    "ollama",
+    "ai",
+    "coding",
+    "assistant"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "repository": {
@@ -44,5 +54,10 @@
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.35.0",
+    "@typescript-eslint/parser": "^8.35.0",
+    "eslint": "^9.30.0"
   }
 }
