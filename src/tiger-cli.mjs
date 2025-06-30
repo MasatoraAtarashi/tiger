@@ -23,19 +23,34 @@ const TIGER_ASCII_LINES = [
   '╰─────────────────────────────────────────────╯'
 ];
 
-// グラデーション色（シアンから紫へ）
-const GRADIENT_COLORS = [
-  'gray',      // 枠上部
-  'gray',      // 空白
-  'cyan',      // T
-  'cyan',      // I
-  'cyanBright', // G
-  'magenta',   // E
-  'magenta',   // R
-  'magentaBright', // 最後
-  'gray',      // 空白
-  'gray'       // 枠下部
+// 各文字ブロックの位置（T, I, G, E, R）
+const LETTER_BLOCKS = [
+  { start: 3, end: 12 },   // T
+  { start: 13, end: 16 },  // I
+  { start: 18, end: 26 },  // G
+  { start: 28, end: 36 },  // E
+  { start: 37, end: 45 }   // R
 ];
+
+// グラデーション色（黄色ベースの細かいグラデーション）
+const GRADIENT_COLORS = [
+  'gray',         // 枠上部
+  'gray',         // 空白
+  'yellowBright', // T - 明るい黄色
+  'yellow',       // I - 黄色
+  'yellow',       // G - 黄色
+  'yellow',       // E - 黄色  
+  'yellowBright', // R - 明るい黄色
+  'yellowBright', // 最後 - 明るい黄色
+  'gray',         // 空白
+  'gray'          // 枠下部
+];
+
+// 文字ごとのグラデーション（各行内で文字単位の色変化）
+const createGradientText = (text, startColor, endColor) => {
+  // この関数は将来の実装用
+  return text;
+};
 
 // TypeScriptのtigerモジュールを動的にロード
 const runTigerChat = async (userInput, skipConfirmation = false) => {
@@ -317,13 +332,36 @@ const TigerCLI = () => {
       React.createElement(Box, { flexDirection: 'column', alignItems: 'center' },
         // グラデーションロゴ
         React.createElement(Box, { flexDirection: 'column' },
-          TIGER_ASCII_LINES.map((line, index) => 
-            React.createElement(Text, { 
-              key: index, 
-              color: GRADIENT_COLORS[index] || 'yellow',
+          TIGER_ASCII_LINES.map((line, lineIndex) => {
+            // 枠線と空白行はグレーで表示
+            if (lineIndex === 0 || lineIndex === 1 || lineIndex === 8 || lineIndex === 9) {
+              return React.createElement(Text, { 
+                key: lineIndex, 
+                color: 'gray',
+                bold: true
+              }, line);
+            }
+            
+            // TIGERの文字が含まれる行（2-7行目）
+            if (lineIndex >= 2 && lineIndex <= 7) {
+              return React.createElement(Box, { key: lineIndex },
+                // 各文字を個別に色付け
+                React.createElement(Text, { color: 'gray', bold: true }, line.substring(0, 3)), // "│  "
+                React.createElement(Text, { color: 'yellow', bold: true }, line.substring(3, 12)), // T
+                React.createElement(Text, { color: 'yellowBright', bold: true }, line.substring(12, 16)), // 間
+                React.createElement(Text, { color: 'yellow', bold: true }, line.substring(16, 26)), // I & G
+                React.createElement(Text, { color: 'yellowBright', bold: true }, line.substring(26, 37)), // 間 & E
+                React.createElement(Text, { color: 'yellow', bold: true }, line.substring(37, 45)), // R
+                React.createElement(Text, { color: 'gray', bold: true }, line.substring(45)) // " │"
+              );
+            }
+            
+            return React.createElement(Text, { 
+              key: lineIndex, 
+              color: 'gray',
               bold: true
-            }, line)
-          )
+            }, line);
+          })
         ),
         React.createElement(Box, { marginTop: 3 },
           React.createElement(Spinner, { type: 'bouncingBar' }),
