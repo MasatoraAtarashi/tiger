@@ -36,7 +36,7 @@ const runTigerChat = async (userInput) => {
       const { Logger } = require('${projectRoot}/src/logger');
       const logger = new Logger();
       
-      tigerChat('${userInput.replace(/'/g, "\\'")}', logger, true)
+      tigerChat('${userInput.replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "\\r")}', logger, true)
         .then((result) => {
           console.log(JSON.stringify(result));
           logger.close();

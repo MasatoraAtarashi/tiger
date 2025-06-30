@@ -63,7 +63,7 @@ const runTigerChat = async (userInput, skipConfirmation = false) => {
       const { Logger } = require('./src/logger');
       const logger = new Logger();
       
-      tigerChat('${userInput.replace(/'/g, "\\'")}', logger, ${skipConfirmation})
+      tigerChat('${userInput.replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "\\r")}', logger, ${skipConfirmation})
         .then((result) => {
           console.log(JSON.stringify(result));
           logger.close();

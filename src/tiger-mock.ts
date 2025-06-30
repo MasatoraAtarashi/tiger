@@ -154,6 +154,60 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
     };
   }
   
+  if (input.includes('complete') || input.includes('report') || input.includes('finish')) {
+    // Extract task details from the input
+    let message = 'Task completed';
+    
+    // Try to extract task name
+    const taskPatterns = [
+      /(?:task|that|the)\s+"([^"]+)"/i,
+      /(?:completed?|report|finish)\s+(?:the\s+)?(?:task\s+)?(.+?)(?:\s+has\s+been|\s+success|$)/i
+    ];
+    
+    for (const pattern of taskPatterns) {
+      const match = userInput.match(pattern);
+      if (match && match[1]) {
+        message = `Task "${match[1]}" completed successfully`;
+        break;
+      }
+    }
+    
+    return {
+      tool: 'complete',
+      args: { message },
+      response: 'I\'ll mark this task as completed.'
+    };
+  }
+  
+  if (input.includes('remember') || input.includes('memory') || input.includes('note')) {
+    const key = 'note';
+    const value = userInput;
+    return {
+      tool: 'memory_add',
+      args: { key, value },
+      response: 'I\'ll remember that for you.'
+    };
+  }
+  
+  if (input.includes('plan') || input.includes('task') || input.includes('break down')) {
+    return {
+      tool: 'task_planner',
+      args: { task: userInput },
+      response: 'Let me create a plan for this task.'
+    };
+  }
+  
+  if (input.includes('fetch') || input.includes('url') || input.includes('website')) {
+    const urlMatch = userInput.match(/https?:\/\/[^\s]+/);
+    if (urlMatch) {
+      return {
+        tool: 'web_fetch',
+        args: { url: urlMatch[0] },
+        response: `I'll fetch content from ${urlMatch[0]}.`
+      };
+    }
+  }
+  
   return {
     response: 'I understand your request but I\'m not sure which tool to use. Could you be more specific?'
   };
