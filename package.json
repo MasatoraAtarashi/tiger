@@ -2,7 +2,6 @@
   "name": "tiger-cli",
   "version": "0.1.0",
   "description": "Tiger - A powerful CLI coding agent powered by Ollama",
-  "type": "module",
   "main": "src/tiger.ts",
   "bin": {
     "tiger": "./src/tiger-cli.mjs"

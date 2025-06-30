@@ -58,7 +58,7 @@ const runTigerChat = async (userInput, skipConfirmation = false) => {
   logger.log('user', userInput);
   
   return new Promise((resolve) => {
-    const child = spawn('npx', ['ts-node', '--transpile-only', '-e', `
+    const child = spawn('npx', ['ts-node', '--project', 'tsconfig.node.json', '--transpile-only', '-e', `
       const { tigerChat } = require('./src/tiger');
       const { Logger } = require('./src/logger');
       const logger = new Logger();
@@ -135,7 +135,7 @@ const TigerCLI = () => {
     const loadConfigAsync = async () => {
       try {
         const configModule = await new Promise((resolve) => {
-          const child = spawn('npx', ['ts-node', '--transpile-only', '-e', `
+          const child = spawn('npx', ['ts-node', '--project', 'tsconfig.node.json', '--transpile-only', '-e', `
             const { loadConfig } = require('./src/config');
             const config = loadConfig();
             console.log(JSON.stringify(config));
