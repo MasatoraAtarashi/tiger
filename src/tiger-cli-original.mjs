@@ -23,34 +23,8 @@ const TIGER_ASCII_LINES = [
   '╰─────────────────────────────────────────────╯'
 ];
 
-// 各文字ブロックの位置（T, I, G, E, R）
-const LETTER_BLOCKS = [
-  { start: 3, end: 12 },   // T
-  { start: 13, end: 16 },  // I
-  { start: 18, end: 26 },  // G
-  { start: 28, end: 36 },  // E
-  { start: 37, end: 45 }   // R
-];
 
-// グラデーション色（黄色ベースの細かいグラデーション）
-const GRADIENT_COLORS = [
-  'gray',         // 枠上部
-  'gray',         // 空白
-  'yellowBright', // T - 明るい黄色
-  'yellow',       // I - 黄色
-  'yellow',       // G - 黄色
-  'yellow',       // E - 黄色
-  'yellowBright', // R - 明るい黄色
-  'yellowBright', // 最後 - 明るい黄色
-  'gray',         // 空白
-  'gray'          // 枠下部
-];
 
-// 文字ごとのグラデーション（各行内で文字単位の色変化）
-const createGradientText = (text, startColor, endColor) => {
-  // この関数は将来の実装用
-  return text;
-};
 
 // TypeScriptのtigerモジュールを動的にロード
 const runTigerChat = async (userInput, skipConfirmation = false) => {
@@ -167,7 +141,7 @@ const TigerCLI = () => {
         if (configModule && configModule.contextSize) {
           setContextUsage(prev => ({ ...prev, total: configModule.contextSize }));
         }
-      } catch (error) {
+      } catch {
         // エラーの場合はデフォルト設定
         const defaultConfig = {
           model: 'llama3.2:3b',
@@ -190,7 +164,7 @@ const TigerCLI = () => {
         const versionPath = path.join(__dirname, 'VERSION');
         const hash = fs.readFileSync(versionPath, 'utf-8').trim();
         return hash || 'unknown';
-      } catch (error) {
+      } catch {
         return 'dev';
       }
     };

@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { render, Text, Box, useInput, useApp } from 'ink';
 import Spinner from 'ink-spinner';
 import { spawn } from 'child_process';
@@ -23,14 +23,6 @@ const TIGER_ASCII_LINES = [
   '╰─────────────────────────────────────────────╯'
 ];
 
-// 各文字ブロックの位置（T, I, G, E, R）
-const LETTER_BLOCKS = [
-  { start: 3, end: 12 },   // T
-  { start: 13, end: 16 },  // I
-  { start: 18, end: 26 },  // G
-  { start: 28, end: 36 },  // E
-  { start: 37, end: 45 }   // R
-];
 
 // グラデーション色（黄色ベースの細かいグラデーション）
 // const GRADIENT_COLORS = [
@@ -103,11 +95,11 @@ const runTigerChat = async (userInput, skipConfirmation = false) => {
             logs: [{ type: 'error', message: 'No output from process' }]
           });
         }
-      } catch {
-        logger.log('error', `Failed to parse output: ${error.message}`, { output });
+      } catch (err) {
+        logger.log('error', `Failed to parse output: ${err.message}`, { output });
         resolve({
           response: 'Error processing request',
-          logs: [{ type: 'error', message: error.toString() }]
+          logs: [{ type: 'error', message: err.toString() }]
         });
       }
     });

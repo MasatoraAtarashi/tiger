@@ -47,7 +47,7 @@ const TigerCLI = () => {
   useEffect(() => {
     const loadConfigAsync = async () => {
       try {
-        const configModule = await new Promise((resolve, reject) => {
+        const configModule = await new Promise((resolve) => {
           const configProcess = spawn('node', ['-e', `
             try {
               const config = require('./dist/config.js').loadConfig();
@@ -83,7 +83,7 @@ const TigerCLI = () => {
 
         setConfig(configModule);
         setContextUsage(prev => ({ ...prev, total: configModule.contextSize || 128000 }));
-      } catch (error) {
+      } catch {
         setConfig({
           model: 'llama3.2:3b',
           timeout: 60000,
@@ -106,7 +106,7 @@ const TigerCLI = () => {
       const versionPath = path.join(__dirname, 'VERSION');
       const hash = fs.readFileSync(versionPath, 'utf-8').trim();
       return hash || 'unknown';
-    } catch (error) {
+    } catch {
       return 'dev';
     }
   };
@@ -118,7 +118,6 @@ const TigerCLI = () => {
 
     logger.log('user', userInput);
 
-    let accumulatedLogs = [];
 
     const tiger = spawn('node', [
       path.join(__dirname, '..', 'dist', 'tiger-cli-wrapper.js'),
@@ -174,13 +173,13 @@ const TigerCLI = () => {
     });
 
     tiger.stderr.on('data', (data) => {
-      const error = data.toString();
+      const errorMessage = data.toString();
       setIsProcessing(false);
       setMessages(prev => [...prev, {
         role: 'assistant',
-        content: `Error: ${error}`
+        content: `Error: ${errorMessage}`
       }]);
-      logger.log('error', error);
+      logger.log('error', errorMessage);
     });
   };
 
