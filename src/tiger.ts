@@ -1,18 +1,22 @@
 import { tools as availableTools } from './tools';
 import { Logger } from './logger';
 import { execSync } from 'child_process';
+import { loadConfig } from './config';
 
 // Ollamaを呼び出す関数
-async function callOllama(prompt: string, logger?: Logger): Promise<string> {
+async function callOllama(prompt: string, logger?: Logger, model?: string): Promise<string> {
+  const config = loadConfig();
+  const modelName = model || config.model;
+  
   try {
-    const command = `echo '${prompt.replace(/'/g, "'\\''")}' | ollama run llama3.2:3b 2>&1`;
+    const command = `echo '${prompt.replace(/'/g, "'\\''")}' | ollama run ${modelName} 2>&1`;
     
     if (logger) {
       logger.log({
         timestamp: new Date().toISOString(),
         type: 'ollama_call',
-        message: 'Calling Ollama',
-        metadata: { promptLength: prompt.length }
+        message: `Calling Ollama with model ${modelName}`,
+        metadata: { promptLength: prompt.length, model: modelName }
       });
     }
     
@@ -21,7 +25,7 @@ async function callOllama(prompt: string, logger?: Logger): Promise<string> {
       stdout = execSync(command, { 
         encoding: 'utf8',
         maxBuffer: 10 * 1024 * 1024,
-        timeout: 60000 // 60秒のタイムアウト
+        timeout: config.timeout
       });
     } catch (error: any) {
       if (error.message.includes('ollama') || error.message.includes('not found') || error.code === 'ENOENT') {
@@ -153,9 +157,10 @@ export async function tigerChat(
   logger?: Logger,
   skipConfirmation: boolean = false
 ): Promise<ChatResult> {
+  const config = loadConfig();
   const logs: ChatLog[] = [];
   const executionHistory: ExecutionStep[] = [];
-  const maxIterations = 10; // 無限ループ防止
+  const maxIterations = config.maxIterations;
   
   logs.push({ type: 'info', message: '🤔 Thinking...' });
   

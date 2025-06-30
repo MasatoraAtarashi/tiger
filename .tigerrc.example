@@ -1,0 +1,9 @@
+{
+  "model": "llama3.2:3b",
+  "timeout": 60000,
+  "maxIterations": 10,
+  "temperature": 0.7,
+  "logDir": "~/.tiger/logs",
+  "logEnabled": true,
+  "logLevel": "info"
+}
