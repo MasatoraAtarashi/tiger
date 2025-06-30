@@ -46,16 +46,16 @@ export const PlanTaskTool = {
       dependsOn: step.dependsOn,
       completed: false
     }));
-    
+
     const plan: TaskPlan = {
       id: planId,
       goal,
       steps: taskSteps,
       currentStep: 0
     };
-    
+
     taskPlans.set(planId, plan);
-    
+
     return {
       planId,
       totalSteps: steps.length
@@ -82,10 +82,10 @@ export const ExecutePlanTool = {
     if (!plan) {
       throw new Error(`Plan ${planId} not found`);
     }
-    
+
     // 次の未完了ステップを探す
     const nextStepIndex = plan.steps.findIndex(step => !step.completed);
-    
+
     if (nextStepIndex === -1) {
       // 全ステップ完了
       return {
@@ -95,21 +95,21 @@ export const ExecutePlanTool = {
         completed: true
       };
     }
-    
+
     const nextStep = plan.steps[nextStepIndex];
-    
+
     // 依存関係をチェック
     if (nextStep.dependsOn && nextStep.dependsOn.length > 0) {
       const allDependenciesMet = nextStep.dependsOn.every(depId => {
         const depStep = plan.steps.find(s => s.id === depId);
         return depStep?.completed;
       });
-      
+
       if (!allDependenciesMet) {
         throw new Error(`Dependencies not met for step ${nextStep.id}`);
       }
     }
-    
+
     // このステップを返す（実行は呼び出し側で行う）
     return {
       currentStep: nextStepIndex + 1,
@@ -138,14 +138,14 @@ export const CompleteStepTool = {
     if (!plan) {
       throw new Error(`Plan ${planId} not found`);
     }
-    
+
     if (stepNumber < 1 || stepNumber > plan.steps.length) {
       throw new Error(`Invalid step number: ${stepNumber}`);
     }
-    
+
     plan.steps[stepNumber - 1].completed = true;
     const remainingSteps = plan.steps.filter(s => !s.completed).length;
-    
+
     return {
       success: true,
       remainingSteps
@@ -175,10 +175,10 @@ export const GetPlanStatusTool = {
     if (!plan) {
       throw new Error(`Plan ${planId} not found`);
     }
-    
+
     const completedSteps = plan.steps.filter(s => s.completed).length;
     const currentStepObj = plan.steps.find(s => !s.completed);
-    
+
     return {
       goal: plan.goal,
       totalSteps: plan.steps.length,

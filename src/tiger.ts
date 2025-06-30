@@ -9,10 +9,10 @@ const availableTools = createToolRegistry();
 async function callOllama(prompt: string, logger?: Logger, model?: string): Promise<string> {
   const config = loadConfig();
   const modelName = model || config.model;
-  
+
   try {
     const command = `echo '${prompt.replace(/'/g, "'\\''")}' | ollama run ${modelName} 2>&1`;
-    
+
     if (logger) {
       logger.log({
         timestamp: new Date().toISOString(),
@@ -21,24 +21,25 @@ async function callOllama(prompt: string, logger?: Logger, model?: string): Prom
         metadata: { promptLength: prompt.length, model: modelName }
       });
     }
-    
+
     let stdout: string;
     try {
-      stdout = execSync(command, { 
+      stdout = execSync(command, {
         encoding: 'utf8',
         maxBuffer: 10 * 1024 * 1024,
         timeout: config.timeout
       });
-      
+
       // デバッグ用に生のレスポンスをログに記録
       if (logger) {
         logger.log({
           timestamp: new Date().toISOString(),
           type: 'debug',
           message: 'Raw Ollama output',
-          metadata: { 
+          metadata: {
             rawLength: stdout.length,
-            rawSample: stdout.substring(0, 200).replace(/[\x00-\x1F\x7F]/g, '?')
+            // eslint-disable-next-line no-control-regex
+            rawSample: stdout.substring(0, 200).replace(/[\x00-\x1F\x7F-\x9F]/g, '?')
           }
         });
       }
@@ -48,22 +49,24 @@ async function callOllama(prompt: string, logger?: Logger, model?: string): Prom
       }
       throw error;
     }
-    
+
     // ANSIエスケープシーケンスを除去
     let cleanOutput = stdout
-                      // 全てのESC文字を除去
-                      .replace(/\x1b/g, '')
-                      .replace(/\u001b/g, '')
-                      // 残りのANSIエスケープシーケンスを除去
-                      .replace(/\[[0-9;]*[a-zA-Z]/g, '')
-                      .replace(/\[\?[0-9;]*[a-zA-Z]/g, '')
-                      .replace(/\[([0-9]+)([A-K])/g, '')
-                      // プログレスインジケーターを除去
-                      .replace(/⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏/g, '')
-                      .replace(/\r/g, '\n')
-                      // 制御文字の後に続く可視文字以外を除去
-                      .replace(/\?[0-9;]*[a-zA-Z]/g, '');
-    
+    // 全てのESC文字を除去
+      // eslint-disable-next-line no-control-regex
+      .replace(/\x1b/g, '')
+      // eslint-disable-next-line no-control-regex
+      .replace(/\u001b/g, '')
+    // 残りのANSIエスケープシーケンスを除去
+      .replace(/\[[0-9;]*[a-zA-Z]/g, '')
+      .replace(/\[\?[0-9;]*[a-zA-Z]/g, '')
+      .replace(/\[([0-9]+)([A-K])/g, '')
+    // プログレスインジケーターを除去
+      .replace(/⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏/g, '')
+      .replace(/\r/g, '\n')
+    // 制御文字の後に続く可視文字以外を除去
+      .replace(/\?[0-9;]*[a-zA-Z]/g, '');
+
     // JSONオブジェクトを抽出する
     const jsonMatch = cleanOutput.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/);
     if (jsonMatch) {
@@ -71,22 +74,22 @@ async function callOllama(prompt: string, logger?: Logger, model?: string): Prom
     } else {
       // 改行で分割してフィルタリング
       cleanOutput = cleanOutput
-                    .split('\n')
-                    .filter(line => !line.includes('pulling') && 
+        .split('\n')
+        .filter(line => !line.includes('pulling') &&
                                   !line.includes('verifying') &&
                                   !line.includes('[K') &&
                                   line.trim() !== '' &&
                                   !line.match(/^\s*$/))
-                    .join('\n')
-                    .trim();
+        .join('\n')
+        .trim();
     }
-    
+
     if (logger) {
       logger.log({
         timestamp: new Date().toISOString(),
         type: 'ollama_response',
         message: 'Received Ollama response',
-        metadata: { 
+        metadata: {
           originalLength: stdout.length,
           cleanedLength: cleanOutput.length,
           response: cleanOutput.substring(0, 500) + (cleanOutput.length > 500 ? '...' : ''),
@@ -94,7 +97,7 @@ async function callOllama(prompt: string, logger?: Logger, model?: string): Prom
         }
       });
     }
-    
+
     return cleanOutput;
   } catch (error: any) {
     if (logger) {
@@ -117,24 +120,30 @@ function extractJson(response: string): any {
     if (typeof parsed === 'object' && parsed !== null) {
       return parsed;
     }
-  } catch {}
-  
+  } catch {
+    // JSONパースエラーは無視
+  }
+
   // コードブロック内のJSONを探す
   const codeBlockMatch = response.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
   if (codeBlockMatch) {
     try {
       return JSON.parse(codeBlockMatch[1]);
-    } catch {}
+    } catch {
+    // JSONパースエラーは無視
+    }
   }
-  
+
   // JSONオブジェクトを探す
   const jsonMatch = response.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/);
   if (jsonMatch) {
     try {
       return JSON.parse(jsonMatch[0]);
-    } catch {}
+    } catch {
+    // JSONパースエラーは無視
+    }
   }
-  
+
   return null;
 }
 
@@ -144,7 +153,7 @@ async function executeTool(toolName: string, args: any, logger?: Logger): Promis
   if (!tool) {
     throw new Error(`Tool "${toolName}" not found`);
   }
-  
+
   if (logger) {
     logger.log({
       timestamp: new Date().toISOString(),
@@ -153,9 +162,9 @@ async function executeTool(toolName: string, args: any, logger?: Logger): Promis
       metadata: { tool: toolName, args }
     });
   }
-  
+
   const result = await tool.execute(args);
-  
+
   if (logger) {
     logger.log({
       timestamp: new Date().toISOString(),
@@ -164,7 +173,7 @@ async function executeTool(toolName: string, args: any, logger?: Logger): Promis
       metadata: { tool: toolName, success: true }
     });
   }
-  
+
   return result;
 }
 
@@ -194,7 +203,7 @@ interface ExecutionStep {
 }
 
 export async function tigerChat(
-  userInput: string, 
+  userInput: string,
   logger?: Logger,
   skipConfirmation: boolean = false,
   memory?: string
@@ -203,11 +212,11 @@ export async function tigerChat(
   const logs: ChatLog[] = [];
   const executionHistory: ExecutionStep[] = [];
   const maxIterations = config.maxIterations;
-  
+
   logs.push({ type: 'info', message: '🤔 Thinking...' });
-  
+
   let totalPromptLength = 0;
-  
+
   // 実行ループ
   for (let iteration = 0; iteration < maxIterations; iteration++) {
     let prompt = `You are Tiger, a helpful coding assistant powered by Ollama and Mastra tools.
@@ -216,15 +225,15 @@ User request: ${userInput}
 
 ${executionHistory.length > 0 ? `
 Previous actions taken:
-${executionHistory.map((exec, idx) => 
-  `${idx + 1}. ${exec.tool}(${JSON.stringify(exec.args)}) - Result: ${
-    exec.tool === 'write_file' ? 'File created successfully' :
-    exec.tool === 'read_file' ? `Read ${exec.result.content.length} characters` :
-    exec.tool === 'ls' ? `Found ${exec.result.files.length} files` :
-    exec.tool === 'shell' ? 'Command executed' :
-    'Completed'
-  }`
-).join('\n')}
+${executionHistory.map((exec, idx) =>
+    `${idx + 1}. ${exec.tool}(${JSON.stringify(exec.args)}) - Result: ${
+      exec.tool === 'write_file' ? 'File created successfully' :
+        exec.tool === 'read_file' ? `Read ${exec.result.content.length} characters` :
+          exec.tool === 'ls' ? `Found ${exec.result.files.length} files` :
+            exec.tool === 'shell' ? 'Command executed' :
+              'Completed'
+    }`
+  ).join('\n')}
 
 Based on what you've done so far, what should you do next to complete the user's request?
 ` : ''}
@@ -252,9 +261,9 @@ IMPORTANT:
 3. Always complete the entire task before responding with a final message.
 4. When creating summaries or documents, include actual content, not just titles.
 5. Think step by step and ensure your outputs are complete and useful.`;
-    
+
     totalPromptLength += prompt.length;
-    
+
     let ollamaResponse: string;
     try {
       logs.push({ type: 'info', message: '🧠 Consulting with AI model...' });
@@ -262,29 +271,29 @@ IMPORTANT:
     } catch (error: any) {
       logs.push({ type: 'error', message: `Ollama error: ${error.message}` });
       return {
-        response: error.message.includes('Ollama is not running') 
-          ? error.message 
+        response: error.message.includes('Ollama is not running')
+          ? error.message
           : `Failed to connect to Ollama: ${error.message}`,
         logs
       };
     }
-    
+
     logs.push({ type: 'info', message: '🔍 Parsing AI response...' });
     const parsed = extractJson(ollamaResponse);
-    
+
     // デバッグ: パース結果をログに記録
     if (logger) {
       logger.log({
         timestamp: new Date().toISOString(),
         type: 'debug',
         message: 'JSON parse result',
-        metadata: { 
+        metadata: {
           parsed: parsed,
           ollamaResponse: ollamaResponse.substring(0, 200)
         }
       });
     }
-    
+
     if (!parsed) {
       // JSONが抽出できない場合は、レスポンスをそのまま返す
       return {
@@ -292,7 +301,7 @@ IMPORTANT:
         logs
       };
     }
-    
+
     // レスポンスの場合（タスク完了）
     if (parsed.response) {
       logs.push({ type: 'success', message: '✅ Task completed' });
@@ -305,12 +314,12 @@ IMPORTANT:
         }
       };
     }
-    
+
     // ツールの実行
     if (parsed.tool && parsed.args) {
       logs.push({ type: 'info', message: '🎯 Identified required action...' });
       logs.push({ type: 'tool', message: `🔧 Selected tool: ${parsed.tool}` });
-      
+
       // 確認が必要な場合
       if (!skipConfirmation && (parsed.tool === 'write_file' || parsed.tool === 'shell')) {
         logs.push({ type: 'confirm', message: `⚠️ Tool execution requires confirmation: ${parsed.tool}` });
@@ -323,20 +332,20 @@ IMPORTANT:
           }
         };
       }
-      
+
       // ツールを実行
       try {
         logs.push({ type: 'exec', message: `🚀 Executing ${parsed.tool}...` });
         const result = await executeTool(parsed.tool, parsed.args, logger);
         logs.push({ type: 'success', message: `✅ ${parsed.tool} completed successfully` });
-        
+
         // 実行履歴に追加
         executionHistory.push({
           tool: parsed.tool,
           args: parsed.args,
           result: result
         });
-        
+
         // 次のイテレーションに進む
         continue;
       } catch (error: any) {
@@ -347,7 +356,7 @@ IMPORTANT:
         };
       }
     }
-    
+
     // ツールもレスポンスもない場合
     logs.push({ type: 'error', message: 'Could not determine next action' });
     return {
@@ -355,7 +364,7 @@ IMPORTANT:
       logs
     };
   }
-  
+
   // 最大イテレーション数に達した
   logs.push({ type: 'success', message: '✅ Task completed' });
   return {

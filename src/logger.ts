@@ -18,7 +18,7 @@ export class Logger {
     this.sessionId = sessionId || new Date().toISOString().replace(/[:.]/g, '-');
     const logFileName = `tiger-session-${this.sessionId}.log`;
     this.logFilePath = path.join(this.config.logDir, logFileName);
-    
+
     if (this.config.logEnabled) {
       ensureLogDirectory(this.config);
       this.writeLogHeader();
@@ -28,7 +28,7 @@ export class Logger {
   private writeLogHeader(): void {
     const header = [
       '='.repeat(80),
-      `Tiger CLI Session Log`,
+      'Tiger CLI Session Log',
       `Session ID: ${this.sessionId}`,
       `Started at: ${new Date().toISOString()}`,
       `Log Directory: ${this.config.logDir}`,

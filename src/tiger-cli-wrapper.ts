@@ -17,7 +17,7 @@ const logger = new Logger();
 const customLogger = {
   log: (entry: any) => {
     logger.log(entry);
-    
+
     // 特定のログのみを親プロセスに送信
     if (['tool', 'exec', 'success', 'error'].includes(entry.type)) {
       console.log(`LOG:${JSON.stringify({
@@ -31,14 +31,14 @@ const customLogger = {
 async function main() {
   try {
     const result = await tigerChat(userInput, customLogger as any, skipConfirmation);
-    
+
     // 結果を親プロセスに送信
     console.log(`RESPONSE:${JSON.stringify({
       response: result.response,
       requiresConfirmation: result.requiresConfirmation,
       contextInfo: result.contextInfo
     })}`);
-    
+
     logger.close();
   } catch (error: any) {
     console.error(error.message);

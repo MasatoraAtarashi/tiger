@@ -8,19 +8,19 @@ export class SimpleLogger {
     this.sessionId = new Date().toISOString().replace(/[:.]/g, '-');
     this.logFileName = `tiger-session-${this.sessionId}.log`;
     this.logFilePath = path.join(this.logDir, this.logFileName);
-    
+
     // ログディレクトリを作成
     if (!fs.existsSync(this.logDir)) {
       fs.mkdirSync(this.logDir, { recursive: true });
     }
-    
+
     this.writeLogHeader();
   }
 
   writeLogHeader() {
     const header = [
       '='.repeat(80),
-      `Tiger CLI Session Log`,
+      'Tiger CLI Session Log',
       `Session ID: ${this.sessionId}`,
       `Started at: ${new Date().toISOString()}`,
       `Log Directory: ${this.logDir}`,
@@ -38,11 +38,11 @@ export class SimpleLogger {
       this.writeLog(timestamp || new Date().toISOString(), type, msg, meta);
       return;
     }
-    
+
     // 従来の引数形式の処理
     this.writeLog(new Date().toISOString(), typeOrEntry, message, metadata);
   }
-  
+
   writeLog(timestamp, type, message, metadata = null) {
     const typeEmoji = {
       info: 'ℹ️ ',
@@ -63,7 +63,7 @@ export class SimpleLogger {
 
     fs.appendFileSync(this.logFilePath, logLine + '\n');
   }
-  
+
   logUserInput(input) {
     this.log('user', input);
   }

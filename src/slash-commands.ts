@@ -28,11 +28,11 @@ export interface CommandResult {
 export class SlashCommandManager {
   private commands: Map<string, SlashCommand> = new Map();
   private customCommands: Map<string, string> = new Map();
-  
+
   constructor() {
     this.registerBuiltinCommands();
   }
-  
+
   private registerBuiltinCommands(): void {
     // Basic commands
     this.register({
@@ -43,7 +43,7 @@ export class SlashCommandManager {
         message: this.getHelpText()
       })
     });
-    
+
     this.register({
       name: 'clear',
       description: 'Clear the conversation',
@@ -52,7 +52,7 @@ export class SlashCommandManager {
         action: 'clear'
       })
     });
-    
+
     this.register({
       name: 'quit',
       description: 'Exit Tiger',
@@ -61,7 +61,7 @@ export class SlashCommandManager {
         action: 'exit'
       })
     });
-    
+
     // Memory commands
     this.register({
       name: 'memory',
@@ -69,7 +69,7 @@ export class SlashCommandManager {
       handler: async (args, context) => {
         const editor = process.env.EDITOR || 'vim';
         const memoryType = args[0] || 'project';
-        
+
         let memoryPath: string;
         if (memoryType === 'user') {
           memoryPath = path.join(homedir(), '.tiger', 'TIGER.md');
@@ -77,14 +77,14 @@ export class SlashCommandManager {
         } else {
           memoryPath = path.join(context.currentDir, 'TIGER.md');
         }
-        
+
         // Ensure file exists
         try {
           await fs.access(memoryPath);
         } catch {
           await fs.writeFile(memoryPath, '# Tiger Memory\n\n', 'utf-8');
         }
-        
+
         try {
           execSync(`${editor} "${memoryPath}"`, { stdio: 'inherit' });
           await context.memoryManager.loadMemories(context.currentDir);
@@ -94,7 +94,7 @@ export class SlashCommandManager {
         }
       }
     });
-    
+
     this.register({
       name: 'init',
       description: 'Initialize project memory',
@@ -103,7 +103,7 @@ export class SlashCommandManager {
         return { success: true, message: 'Project memory initialized' };
       }
     });
-    
+
     // Status commands
     this.register({
       name: 'status',
@@ -111,7 +111,7 @@ export class SlashCommandManager {
       handler: async (args, context) => {
         const memories = await this.getMemoryStatus(context);
         const model = context.config?.model || 'unknown';
-        
+
         return {
           success: true,
           message: `🐯 Tiger Status
@@ -121,37 +121,37 @@ ${memories}`
         };
       }
     });
-    
+
     this.register({
       name: 'model',
       description: 'Show or change the model',
       handler: async (args, context) => {
         if (args.length === 0) {
-          return { 
-            success: true, 
-            message: `Current model: ${context.config?.model || 'unknown'}` 
+          return {
+            success: true,
+            message: `Current model: ${context.config?.model || 'unknown'}`
           };
         }
-        
+
         // To change model, we'd need to update config
-        return { 
-          success: false, 
-          message: 'Model switching not yet implemented' 
+        return {
+          success: false,
+          message: 'Model switching not yet implemented'
         };
       }
     });
   }
-  
+
   register(command: SlashCommand): void {
     this.commands.set(command.name, command);
   }
-  
+
   async loadCustomCommands(projectDir: string): Promise<void> {
     const paths = [
       path.join(homedir(), '.tiger', 'commands'),
       path.join(projectDir, '.tiger', 'commands')
     ];
-    
+
     for (const commandsPath of paths) {
       try {
         const files = await fs.readdir(commandsPath);
@@ -167,72 +167,72 @@ ${memories}`
       }
     }
   }
-  
+
   async execute(commandLine: string, context: CommandContext): Promise<CommandResult> {
     const [commandName, ...args] = commandLine.slice(1).split(/\s+/);
-    
+
     // Check built-in commands
     const command = this.commands.get(commandName);
     if (command) {
       return command.handler(args, context);
     }
-    
+
     // Check custom commands
     const customContent = this.customCommands.get(commandName);
     if (customContent) {
-      return { 
-        success: true, 
+      return {
+        success: true,
         message: 'Custom command execution not yet implemented',
         data: { content: customContent }
       };
     }
-    
-    return { 
-      success: false, 
-      message: `Unknown command: ${commandName}. Type /help for available commands.` 
+
+    return {
+      success: false,
+      message: `Unknown command: ${commandName}. Type /help for available commands.`
     };
   }
-  
+
   isSlashCommand(input: string): boolean {
     return input.startsWith('/');
   }
-  
+
   private getHelpText(): string {
     const builtinCommands = Array.from(this.commands.entries())
       .map(([name, cmd]) => `  /${name} - ${cmd.description}`)
       .join('\n');
-    
+
     const customCommandsList = Array.from(this.customCommands.keys())
       .map(name => `  /${name} (custom)`)
       .join('\n');
-    
+
     return `🐯 Tiger Commands
 
 Built-in Commands:
 ${builtinCommands}
 ${customCommandsList ? '\nCustom Commands:\n' + customCommandsList : ''}`;
   }
-  
+
   private async getMemoryStatus(context: CommandContext): Promise<string> {
     const userMemoryPath = path.join(homedir(), '.tiger', 'TIGER.md');
     const projectMemoryPath = path.join(context.currentDir, 'TIGER.md');
-    
+
     const memories: string[] = [];
-    
+
     try {
       await fs.access(userMemoryPath);
       memories.push('✓ User memory');
     } catch {
       memories.push('✗ User memory');
     }
-    
+
     try {
       await fs.access(projectMemoryPath);
       memories.push('✓ Project memory');
     } catch {
       memories.push('✗ Project memory');
     }
-    
+
     return 'Memory Files:\n' + memories.join('\n');
   }
 }

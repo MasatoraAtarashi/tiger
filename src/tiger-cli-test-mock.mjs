@@ -29,14 +29,14 @@ const userInput = args.join(' ');
 const runTigerChat = async (userInput) => {
   // ユーザー入力をログに記録
   logger.log('user', userInput);
-  
+
   return new Promise((resolve, reject) => {
     const child = spawn('npx', ['ts-node', '--transpile-only', '-e', `
       const { tigerChat } = require('${projectRoot}/src/tiger-mock');
       const { Logger } = require('${projectRoot}/src/logger');
       const logger = new Logger();
       
-      tigerChat('${userInput.replace(/'/g, "\\'").replace(/\n/g, "\\n").replace(/\r/g, "\\r")}', logger, true)
+      tigerChat('${userInput.replace(/'/g, "\\'").replace(/\n/g, '\\n').replace(/\r/g, '\\r')}', logger, true)
         .then((result) => {
           console.log(JSON.stringify(result));
           logger.close();
@@ -46,19 +46,19 @@ const runTigerChat = async (userInput) => {
           logger.close();
         });
     `], { cwd: process.cwd() });
-    
+
     let output = '';
     let errorOutput = '';
-    
+
     child.stdout.on('data', (data) => {
       output += data.toString();
     });
-    
+
     child.stderr.on('data', (data) => {
       errorOutput += data.toString();
       logger.log('error', `Process stderr: ${data.toString()}`);
     });
-    
+
     child.on('close', (code) => {
       try {
         if (output.trim()) {
@@ -93,28 +93,28 @@ const runTigerChat = async (userInput) => {
 (async () => {
   try {
     console.log(`Processing: "${userInput}"`);
-    
+
     const result = await runTigerChat(userInput);
-    
+
     // Display logs
     if (result.logs) {
       console.log('\n--- Execution Log ---');
       for (const log of result.logs) {
         const prefix = log.type === 'error' ? '[ERROR]' :
-                      log.type === 'info' ? '[INFO]' :
-                      log.type === 'tool' ? '[TOOL]' :
-                      log.type === 'exec' ? '[EXEC]' :
-                      log.type === 'success' ? '[SUCCESS]' : '[LOG]';
+          log.type === 'info' ? '[INFO]' :
+            log.type === 'tool' ? '[TOOL]' :
+              log.type === 'exec' ? '[EXEC]' :
+                log.type === 'success' ? '[SUCCESS]' : '[LOG]';
         console.log(`${prefix} ${log.message}`);
         logger.log(log.type, log.message);
       }
     }
-    
+
     // Display response
     console.log('\n--- Response ---');
     console.log(result.response);
     logger.log('assistant', result.response);
-    
+
     logger.close();
     process.exit(0);
   } catch (error) {

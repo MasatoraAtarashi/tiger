@@ -10,7 +10,7 @@ const availableTools = createToolRegistry();
 // Mock function that simulates AI responses based on input
 function getMockResponse(userInput: string): { tool?: string; args?: any; response: string } {
   const input = userInput.toLowerCase();
-  
+
   if (input.includes('list') && (input.includes('file') || input.includes('directory'))) {
     // Check if a specific directory is mentioned
     const dirPatterns = [
@@ -18,7 +18,7 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
       /list\s+(\S+)\s+directory/i,        // "list src/components directory"
       /files?\s+in\s+(\S+)/i              // "files in src/components"
     ];
-    
+
     let path = '.';
     for (const pattern of dirPatterns) {
       const match = userInput.match(pattern);
@@ -27,14 +27,14 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
         break;
       }
     }
-    
+
     return {
       tool: 'ls',
       args: { path },
       response: `I'll list the files in ${path === '.' ? 'the current directory' : path} for you.`
     };
   }
-  
+
   if (input.includes('read')) {
     // Handle different file patterns
     const filePatterns = [
@@ -42,7 +42,7 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
       /read\s+the\s+contents?\s+of\s+(\S+\.\w+)/i,  // "read the contents of file.ext"
       /(\S+\.\w+)/                 // Any file with extension
     ];
-    
+
     let filename = 'file.txt';
     for (const pattern of filePatterns) {
       const match = userInput.match(pattern);
@@ -51,14 +51,14 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
         break;
       }
     }
-    
+
     return {
       tool: 'read_file',
       args: { path: filename },
       response: `I'll read the contents of ${filename} for you.`
     };
   }
-  
+
   if (input.includes('create') && input.includes('file')) {
     // Handle different filename patterns
     const filenamePatterns = [
@@ -66,7 +66,7 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
       /file\s+(\S+\.\w+)/,               // Match "file path/to/file.ext"
       /create\s+a?\s*file\s+(\S+\.\w+)/ // Match "create a file path/to/file.ext"
     ];
-    
+
     let filename = 'output.txt';
     for (const pattern of filenamePatterns) {
       const match = userInput.match(pattern);
@@ -75,7 +75,7 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
         break;
       }
     }
-    
+
     // Try multiple patterns to capture content
     let content = 'Default content';
     const contentPatterns = [
@@ -85,7 +85,7 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
       /content\s+"([^"]+)"/i,
       /with content\s+"([^"]+)"/i
     ];
-    
+
     for (const pattern of contentPatterns) {
       const match = userInput.match(pattern);
       if (match) {
@@ -93,14 +93,14 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
         break;
       }
     }
-    
+
     return {
       tool: 'write_file',
       args: { path: filename, content },
       response: `I'll create ${filename} with the specified content.`
     };
   }
-  
+
   if (input.includes('write') && input.includes('.txt')) {
     const filenameMatch = userInput.match(/to\s+(\w+\.txt)/);
     const contentMatch = userInput.match(/"([^"]+)"/);
@@ -112,7 +112,7 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
       response: `I'll write that content to ${filename}.`
     };
   }
-  
+
   if (input.includes('search') || input.includes('find')) {
     if (input.includes('console.log')) {
       return {
@@ -143,7 +143,7 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
       };
     }
   }
-  
+
   if (input.includes('run') || input.includes('execute') || input.includes('command')) {
     const commandMatch = userInput.match(/(?:command:|run|execute)\s*(.+)/);
     const command = commandMatch ? commandMatch[1].trim() : 'echo "Hello"';
@@ -153,17 +153,17 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
       response: `I'll execute the command: ${command}`
     };
   }
-  
+
   if (input.includes('complete') || input.includes('report') || input.includes('finish')) {
     // Extract task details from the input
     let message = 'Task completed';
-    
+
     // Try to extract task name
     const taskPatterns = [
       /(?:task|that|the)\s+"([^"]+)"/i,
       /(?:completed?|report|finish)\s+(?:the\s+)?(?:task\s+)?(.+?)(?:\s+has\s+been|\s+success|$)/i
     ];
-    
+
     for (const pattern of taskPatterns) {
       const match = userInput.match(pattern);
       if (match && match[1]) {
@@ -171,14 +171,14 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
         break;
       }
     }
-    
+
     return {
       tool: 'complete',
       args: { message },
       response: 'I\'ll mark this task as completed.'
     };
   }
-  
+
   if (input.includes('remember') || input.includes('memory') || input.includes('note')) {
     const key = 'note';
     const value = userInput;
@@ -188,7 +188,7 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
       response: 'I\'ll remember that for you.'
     };
   }
-  
+
   if (input.includes('plan') || input.includes('task') || input.includes('break down')) {
     return {
       tool: 'task_planner',
@@ -196,7 +196,7 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
       response: 'Let me create a plan for this task.'
     };
   }
-  
+
   if (input.includes('fetch') || input.includes('url') || input.includes('website')) {
     const urlMatch = userInput.match(/https?:\/\/[^\s]+/);
     if (urlMatch) {
@@ -207,7 +207,7 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
       };
     }
   }
-  
+
   return {
     response: 'I understand your request but I\'m not sure which tool to use. Could you be more specific?'
   };
@@ -216,27 +216,27 @@ function getMockResponse(userInput: string): { tool?: string; args?: any; respon
 export async function tigerChat(
   userInput: string,
   logger?: Logger,
-  skipConfirmation: boolean = false
+  _skipConfirmation: boolean = false
 ): Promise<{ response: string; logs: any[]; requiresConfirmation?: any }> {
   const logs: any[] = [];
-  
+
   try {
     // Log thinking
     logs.push({ type: 'info', message: '🤔 Analyzing request...' });
-    
+
     // Get mock response
     const mockResponse = getMockResponse(userInput);
-    
+
     if (mockResponse.tool && mockResponse.args) {
       // Execute tool
       const tool = availableTools[mockResponse.tool];
       if (!tool) {
         throw new Error(`Tool ${mockResponse.tool} not found`);
       }
-      
+
       logs.push({ type: 'tool', message: `🔧 Using tool: ${mockResponse.tool}` });
       logs.push({ type: 'exec', message: `⚡ Executing with args: ${JSON.stringify(mockResponse.args)}` });
-      
+
       if (logger) {
         logger.log({
           timestamp: new Date().toISOString(),
@@ -245,11 +245,11 @@ export async function tigerChat(
           metadata: { tool: mockResponse.tool, args: mockResponse.args }
         });
       }
-      
+
       const result = await tool.execute(mockResponse.args);
-      
-      logs.push({ type: 'success', message: `✅ Tool executed successfully` });
-      
+
+      logs.push({ type: 'success', message: '✅ Tool executed successfully' });
+
       if (logger) {
         logger.log({
           timestamp: new Date().toISOString(),
@@ -258,7 +258,7 @@ export async function tigerChat(
           metadata: { result }
         });
       }
-      
+
       // Format response with result
       let formattedResponse = mockResponse.response + '\n\n';
       if (mockResponse.tool === 'ls' && result.files) {
@@ -266,7 +266,7 @@ export async function tigerChat(
       } else if (mockResponse.tool === 'read_file' && result.content) {
         formattedResponse += 'File content:\n```\n' + result.content + '\n```';
       } else if (mockResponse.tool === 'grep' && result.matches) {
-        formattedResponse += 'Matches found:\n' + result.matches.map((m: any) => 
+        formattedResponse += 'Matches found:\n' + result.matches.map((m: any) =>
           `- ${m.file}:${m.line}: ${m.content}`
         ).join('\n');
       } else if (mockResponse.tool === 'glob' && result.files) {
@@ -274,22 +274,22 @@ export async function tigerChat(
       } else if (mockResponse.tool === 'shell') {
         formattedResponse += 'Command output:\n```\n' + result.stdout + '\n```';
       }
-      
+
       return {
         response: formattedResponse,
         logs
       };
     }
-    
+
     // No tool needed
     return {
       response: mockResponse.response,
       logs
     };
-    
+
   } catch (error: any) {
     logs.push({ type: 'error', message: `❌ Error: ${error.message}` });
-    
+
     if (logger) {
       logger.log({
         timestamp: new Date().toISOString(),
@@ -298,7 +298,7 @@ export async function tigerChat(
         metadata: { stack: error.stack }
       });
     }
-    
+
     return {
       response: `I encountered an error: ${error.message}`,
       logs

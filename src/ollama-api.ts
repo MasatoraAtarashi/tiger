@@ -8,7 +8,7 @@ export interface OllamaResponse {
 }
 
 export async function callOllamaAPI(
-  prompt: string, 
+  prompt: string,
   model: string = 'llama3.2:3b',
   logger?: Logger
 ): Promise<string> {
@@ -22,10 +22,10 @@ export async function callOllamaAPI(
       });
     }
 
-    const response = await fetch('http://localhost:11434/api/generate', {
+    const response = await global.fetch('http://localhost:11434/api/generate', {
       method: 'POST',
       headers: {
-        'Content-Type': 'application/json',
+        'Content-Type': 'application/json'
       },
       body: JSON.stringify({
         model: model,
@@ -42,13 +42,13 @@ export async function callOllamaAPI(
     }
 
     const data = await response.json() as OllamaResponse;
-    
+
     if (logger) {
       logger.log({
         timestamp: new Date().toISOString(),
         type: 'ollama_response',
         message: 'Received Ollama API response',
-        metadata: { 
+        metadata: {
           responseLength: data.response.length,
           response: data.response.substring(0, 500) + (data.response.length > 500 ? '...' : '')
         }
@@ -65,12 +65,12 @@ export async function callOllamaAPI(
         metadata: { error: error.message }
       });
     }
-    
+
     // Ollamaが起動していない場合
     if (error.message.includes('fetch failed') || error.message.includes('ECONNREFUSED')) {
       throw new Error('Ollama is not running. Please start Ollama first with: ollama serve');
     }
-    
+
     throw error;
   }
 }

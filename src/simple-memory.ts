@@ -7,9 +7,9 @@ export async function loadMemory(): Promise<string | null> {
     path.join(process.cwd(), 'TIGER.md'),
     path.join(homedir(), '.tiger', 'TIGER.md')
   ];
-  
+
   const memories: string[] = [];
-  
+
   for (const memPath of memoryPaths) {
     try {
       const content = await fs.readFile(memPath, 'utf-8');
@@ -18,6 +18,6 @@ export async function loadMemory(): Promise<string | null> {
       // File doesn't exist, skip
     }
   }
-  
+
   return memories.length > 0 ? memories.join('\n\n---\n\n') : null;
 }

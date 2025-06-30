@@ -1,7 +1,6 @@
 import { z } from 'zod';
 import { execSync } from 'child_process';
 import * as fs from 'fs/promises';
-import * as path from 'path';
 import glob from 'fast-glob';
 import { PlanTaskTool, ExecutePlanTool, CompleteStepTool, GetPlanStatusTool } from './task-planner';
 
@@ -88,7 +87,7 @@ export const GrepTool: Tool = {
         };
       });
       return { matches };
-    } catch (error) {
+    } catch {
       return { matches: [] };
     }
   }
@@ -147,7 +146,7 @@ export const WebFetchTool: Tool = {
     statusCode: z.number()
   }),
   execute: async ({ url }) => {
-    const response = await fetch(url);
+    const response = await global.fetch(url);
     const content = await response.text();
     return { content, statusCode: response.status };
   }
@@ -170,16 +169,16 @@ export const MemoryTool: Tool = {
   }),
   execute: async ({ action, key, value }) => {
     switch (action) {
-      case 'get':
-        return { success: true, value: memoryStore.get(key) };
-      case 'set':
-        memoryStore.set(key, value);
-        return { success: true };
-      case 'delete':
-        memoryStore.delete(key);
-        return { success: true };
-      default:
-        return { success: false };
+    case 'get':
+      return { success: true, value: memoryStore.get(key) };
+    case 'set':
+      memoryStore.set(key, value);
+      return { success: true };
+    case 'delete':
+      memoryStore.delete(key);
+      return { success: true };
+    default:
+      return { success: false };
     }
   }
 };
@@ -201,7 +200,7 @@ export const CompleteTool: Tool = {
   }),
   execute: async ({ task, summary, files_modified = [], commands_executed = [], result }) => {
     const timestamp = new Date().toISOString();
-    
+
     const report = [
       `🎯 Task Completed: ${task}`,
       `📊 Status: ${result === 'success' ? '✅ Success' : result === 'partial' ? '⚠️ Partial' : '❌ Failed'}`,
@@ -210,10 +209,10 @@ export const CompleteTool: Tool = {
       commands_executed.length > 0 ? `⚡ Commands Executed:\n${commands_executed.map((c: string) => `   - ${c}`).join('\n')}` : '',
       `⏰ Completed at: ${timestamp}`
     ].filter(Boolean).join('\n');
-    
+
     // コンソール出力を削除（JSON応答を壊すため）
     // ログは tiger.ts の Logger で記録される
-    
+
     return { report, timestamp };
   }
 };
