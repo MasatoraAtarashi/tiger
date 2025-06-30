@@ -9,18 +9,33 @@ import { SimpleLogger } from './simple-logger.mjs';
 // ロガーインスタンスを作成
 const logger = new SimpleLogger();
 
-// TIGERのASCIIアート（行ごとに分割）
+// TIGERのASCIIアート（スタイリッシュ版）
 const TIGER_ASCII_LINES = [
-  ' ███████╗ ██╗  ██████╗  ███████╗ ██████╗ ',
-  ' ╚══██╔══╝ ██║ ██╔════╝  ██╔════╝ ██╔══██╗',
-  '    ██║    ██║ ██║  ███╗ █████╗   ██████╔╝',
-  '    ██║    ██║ ██║   ██║ ██╔══╝   ██╔══██╗',
-  '    ██║    ██║ ╚██████╔╝ ███████╗ ██║  ██║',
-  '    ╚═╝    ╚═╝  ╚═════╝  ╚══════╝ ╚═╝  ╚═╝'
+  '╭─────────────────────────────────────────────╮',
+  '│                                             │',
+  '│  ████████╗ ██╗  ██████╗  ███████╗ ██████╗  │',
+  '│  ╚══██╔══╝ ██║ ██╔════╝  ██╔════╝ ██╔══██╗ │',
+  '│     ██║    ██║ ██║  ███╗ █████╗   ██████╔╝ │',
+  '│     ██║    ██║ ██║   ██║ ██╔══╝   ██╔══██╗ │',
+  '│     ██║    ██║ ╚██████╔╝ ███████╗ ██║  ██║ │',
+  '│     ╚═╝    ╚═╝  ╚═════╝  ╚══════╝ ╚═╝  ╚═╝ │',
+  '│                                             │',
+  '╰─────────────────────────────────────────────╯'
 ];
 
-// グラデーション色（黄色から赤へ）
-const GRADIENT_COLORS = ['yellow', 'yellow', 'yellowBright', 'redBright', 'red', 'red'];
+// グラデーション色（シアンから紫へ）
+const GRADIENT_COLORS = [
+  'gray',      // 枠上部
+  'gray',      // 空白
+  'cyan',      // T
+  'cyan',      // I
+  'cyanBright', // G
+  'magenta',   // E
+  'magenta',   // R
+  'magentaBright', // 最後
+  'gray',      // 空白
+  'gray'       // 枠下部
+];
 
 // TypeScriptのtigerモジュールを動的にロード
 const runTigerChat = async (userInput, skipConfirmation = false) => {
@@ -116,13 +131,12 @@ const TigerCLI = () => {
       setShowLogo(false);
       const commitHash = getCommitHash();
       setMessages([
-        { role: 'system', content: '🐯 Welcome to Tiger - Your CLI Coding Agent!' },
-        { role: 'system', content: `📦 Version: ${commitHash}` },
         { role: 'system', content: 'Tips for getting started:' },
-        { role: 'system', content: '1. Ask questions, edit files, or run commands' },
-        { role: 'system', content: '2. Be specific for the best results' },
-        { role: 'system', content: '3. Type /help for more information or /quit to exit' },
-        { role: 'system', content: `📝 Session log: ${logger.getLogFilePath()}`}
+        { role: 'system', content: '• Ask questions, edit files, or run commands' },
+        { role: 'system', content: '• Be specific for the best results' },
+        { role: 'system', content: '• Type /help for more information' },
+        { role: 'system', content: '' },
+        { role: 'system', content: `Version ${commitHash} • /quit to exit` }
       ]);
     }, 2000);
     
@@ -212,14 +226,18 @@ const TigerCLI = () => {
       if (key.return) {
         if (selectedOption === 0) {
           // Yes - 実行
-          const originalRequest = `Please execute the ${pendingConfirmation.tool} tool with the following arguments: ${JSON.stringify(pendingConfirmation.args)}`;
-          processUserInput(originalRequest, true);
+          const lastUserMessage = messages.filter(m => m.role === 'user').pop();
+          if (lastUserMessage) {
+            processUserInput(lastUserMessage.content, true);
+          }
           setPendingConfirmation(null);
           setSelectedOption(0);
         } else if (selectedOption === 1) {
           // Yes, and don't ask again (将来の実装用)
-          const originalRequest = `Please execute the ${pendingConfirmation.tool} tool with the following arguments: ${JSON.stringify(pendingConfirmation.args)}`;
-          processUserInput(originalRequest, true);
+          const lastUserMessage = messages.filter(m => m.role === 'user').pop();
+          if (lastUserMessage) {
+            processUserInput(lastUserMessage.content, true);
+          }
           setPendingConfirmation(null);
           setSelectedOption(0);
         } else if (selectedOption === 2) {
@@ -240,8 +258,11 @@ const TigerCLI = () => {
         // 自動的に選択を確定
         setTimeout(() => {
           if (option === 0 || option === 1) {
-            const originalRequest = `Please execute the ${pendingConfirmation.tool} tool with the following arguments: ${JSON.stringify(pendingConfirmation.args)}`;
-            processUserInput(originalRequest, true);
+            // 元のユーザーリクエストを再送信（確認をスキップ）
+            const lastUserMessage = messages.filter(m => m.role === 'user').pop();
+            if (lastUserMessage) {
+              processUserInput(lastUserMessage.content, true);
+            }
             setPendingConfirmation(null);
             setSelectedOption(0);
           } else if (option === 2) {
@@ -304,15 +325,9 @@ const TigerCLI = () => {
             }, line)
           )
         ),
-        React.createElement(Box, { marginTop: 2 },
-          React.createElement(Text, { color: 'cyan', bold: true }, 'Your CLI Coding Agent')
-        ),
-        React.createElement(Box, { marginTop: 1 },
-          React.createElement(Text, { color: 'gray' }, 'Powered by Ollama + Mastra')
-        ),
-        React.createElement(Box, { marginTop: 2 },
-          React.createElement(Spinner, { type: 'dots' }),
-          React.createElement(Text, { color: 'gray' }, ' Initializing...')
+        React.createElement(Box, { marginTop: 3 },
+          React.createElement(Spinner, { type: 'bouncingBar' }),
+          React.createElement(Text, { color: 'gray', dimColor: true }, ' ')
         )
       )
     );
@@ -337,7 +352,7 @@ const TigerCLI = () => {
             color: msg.role === 'user' ? 'green' : msg.role === 'system' ? 'gray' : 'cyan',
             wrap: 'wrap'
           },
-            msg.role === 'user' ? '👤 You: ' : msg.role === 'system' ? '💻 ' : '🐯 Tiger: ',
+            msg.role === 'user' ? '🐯 You: ' : msg.role === 'system' ? '🐯 ' : '🐯 Tiger: ',
             msg.content
           )
         )
@@ -373,7 +388,7 @@ const TigerCLI = () => {
     pendingConfirmation ? 
       React.createElement(Box, { borderStyle: 'double', borderColor: 'cyan', padding: 1, marginTop: 1, flexDirection: 'column' },
         React.createElement(Box, { marginBottom: 1 },
-          React.createElement(Text, { bold: true, color: 'cyan' }, `🔧 ${pendingConfirmation.tool.toUpperCase()}`)
+          React.createElement(Text, { bold: true, color: 'cyan' }, `🐯 ${pendingConfirmation.tool.toUpperCase()}`)
         ),
         React.createElement(Box, { marginBottom: 1 },
           React.createElement(Text, { color: 'white' }, 
@@ -404,7 +419,7 @@ const TigerCLI = () => {
       ) :
       React.createElement(Box, { borderStyle: 'bold', borderColor: 'yellow', padding: 1, marginTop: 1 },
         React.createElement(Text, { color: isProcessing ? 'yellow' : 'green' },
-          isProcessing ? '⏳ Tiger is thinking...' : `> ${inputValue}█`
+          isProcessing ? '🐯 Tiger is thinking...' : `> ${inputValue}█`
         )
       ),
     
