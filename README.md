@@ -1,5 +1,7 @@
 # Tiger CLI 🐯
 
+![Tiger CLI](./screenshot.png)
+
 A powerful CLI coding agent powered by Ollama and Mastra tools. Tiger helps you with various coding tasks through natural language interaction.
 
 ## Features
