@@ -121,9 +121,20 @@ export async function tigerChat(userInput: string, logger?: Logger): Promise<{
   
   logs.push({ type: 'info', message: '🤔 Thinking...' });
   
+  // ユーザー入力を分析
+  if (userInput.toLowerCase().includes('file') || userInput.toLowerCase().includes('read')) {
+    logs.push({ type: 'info', message: '📂 Analyzing file operation request...' });
+  } else if (userInput.toLowerCase().includes('run') || userInput.toLowerCase().includes('command')) {
+    logs.push({ type: 'info', message: '⚡ Analyzing command execution request...' });
+  } else if (userInput.toLowerCase().includes('create') || userInput.toLowerCase().includes('write')) {
+    logs.push({ type: 'info', message: '✏️ Analyzing creation request...' });
+  }
+  
   if (logger) {
     logger.logUserInput(userInput);
   }
+  
+  logs.push({ type: 'info', message: '🧠 Consulting with AI model...' });
   
   // Ollamaに送信
   let ollamaResponse: string;
@@ -137,6 +148,8 @@ export async function tigerChat(userInput: string, logger?: Logger): Promise<{
     };
   }
   
+  logs.push({ type: 'info', message: '🔍 Parsing AI response...' });
+  
   const parsed = extractJson(ollamaResponse);
   
   if (!parsed) {
@@ -148,6 +161,7 @@ export async function tigerChat(userInput: string, logger?: Logger): Promise<{
   
   // 通常の回答の場合
   if (parsed.answer) {
+    logs.push({ type: 'info', message: '💭 Formulating response...' });
     logs.push({ type: 'success', message: '✅ Response ready' });
     if (logger) {
       logger.logAssistantResponse(parsed.answer);
@@ -160,7 +174,9 @@ export async function tigerChat(userInput: string, logger?: Logger): Promise<{
   
   // ツール呼び出しの場合
   if (parsed.tool && tools[parsed.tool]) {
+    logs.push({ type: 'info', message: '🎯 Identified required action...' });
     logs.push({ type: 'tool', message: `🔧 Selected tool: ${parsed.tool}` });
+    logs.push({ type: 'info', message: '🔄 Preparing tool execution...' });
     logs.push({ type: 'exec', message: `⚡ Executing with args: ${JSON.stringify(parsed.args)}` });
     
     try {
@@ -170,6 +186,9 @@ export async function tigerChat(userInput: string, logger?: Logger): Promise<{
       if (logger) {
         logger.logToolExecution(parsed.tool, parsed.args, toolResult);
       }
+      
+      logs.push({ type: 'info', message: '📊 Processing tool results...' });
+      logs.push({ type: 'info', message: '🤖 Generating final response...' });
       
       // ツール結果を含めて再度LLMに問い合わせ
       const resultPrompt = `${systemPrompt}

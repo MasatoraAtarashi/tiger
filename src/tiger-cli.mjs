@@ -124,7 +124,18 @@ const TigerCLI = () => {
           setToolLogs(prev => [...prev, log]);
           // ツールログも記録
           logger.log(log.type, log.message);
-          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // メッセージの種類によって表示速度を調整
+          let delay = 150; // デフォルト遅延
+          if (log.type === 'info') {
+            delay = 100; // info メッセージは早く
+          } else if (log.type === 'tool' || log.type === 'exec') {
+            delay = 200; // ツール実行は少し遅く
+          } else if (log.type === 'success' || log.type === 'error') {
+            delay = 250; // 結果表示は少し長め
+          }
+          
+          await new Promise(resolve => setTimeout(resolve, delay));
         }
       }
       
@@ -248,7 +259,8 @@ const TigerCLI = () => {
             color: log.type === 'info' ? 'blue' : 
                    log.type === 'tool' ? 'magenta' :
                    log.type === 'exec' ? 'yellow' : 
-                   log.type === 'error' ? 'red' : 'green'
+                   log.type === 'error' ? 'red' : 'green',
+            dimColor: log.type === 'info' // info メッセージは少し薄く
           }, log.message)
         )
       )
