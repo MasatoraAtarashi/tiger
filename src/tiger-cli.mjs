@@ -93,11 +93,24 @@ const TigerCLI = () => {
   // ロガーの初期化とロゴ表示
   useEffect(() => {
     setCurrentLogPath(logger.getLogFilePath());
+    // Gitコミットハッシュを取得
+    const getCommitHash = () => {
+      try {
+        const { execSync } = require('child_process');
+        const hash = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
+        return hash;
+      } catch {
+        return 'unknown';
+      }
+    };
+    
     // ロゴを表示してからメッセージを追加
     setTimeout(() => {
       setShowLogo(false);
+      const commitHash = getCommitHash();
       setMessages([
         { role: 'system', content: '🐯 Welcome to Tiger - Your CLI Coding Agent!' },
+        { role: 'system', content: `📦 Version: ${commitHash}` },
         { role: 'system', content: 'Tips for getting started:' },
         { role: 'system', content: '1. Ask questions, edit files, or run commands' },
         { role: 'system', content: '2. Be specific for the best results' },
