@@ -11,7 +11,9 @@
     "dev": "ts-node src/tiger.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "version": "git rev-parse --short HEAD > src/VERSION",
+    "precommit": "npm run version"
   },
   "keywords": ["cli", "agent", "ollama", "ai", "coding", "assistant"],
   "author": "Your Name",

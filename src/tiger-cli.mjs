@@ -25,12 +25,7 @@ const runTigerChat = async (userInput) => {
   logger.log('user', userInput);
   
   return new Promise((resolve) => {
-    const child = spawn('npx', ['ts-node', '--transpile-only', '--no-cache', '-e', `
-      // Clear require cache to ensure latest code is loaded
-      delete require.cache[require.resolve('./src/tiger')];
-      delete require.cache[require.resolve('./src/logger')];
-      delete require.cache[require.resolve('./src/tools')];
-      
+    const child = spawn('npx', ['ts-node', '--transpile-only', '-e', `
       const { tigerChat } = require('./src/tiger');
       const { Logger } = require('./src/logger');
       const logger = new Logger();
@@ -98,18 +93,16 @@ const TigerCLI = () => {
   // ロガーの初期化とロゴ表示
   useEffect(() => {
     setCurrentLogPath(logger.getLogFilePath());
-    // Gitコミットハッシュを取得
+    // VERSIONファイルからコミットハッシュを取得
     const getCommitHash = () => {
       try {
-        const { execSync } = require('child_process');
-        const hash = execSync('git rev-parse --short HEAD', { 
-          encoding: 'utf-8',
-          cwd: process.cwd()
-        }).trim();
-        return hash;
+        const fs = require('fs');
+        const path = require('path');
+        const versionPath = path.join(__dirname, 'VERSION');
+        const hash = fs.readFileSync(versionPath, 'utf-8').trim();
+        return hash || 'unknown';
       } catch (error) {
-        console.error('Git hash error:', error.message);
-        return 'unknown';
+        return 'dev';
       }
     };
     
