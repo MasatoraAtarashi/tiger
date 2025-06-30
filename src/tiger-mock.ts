@@ -208,15 +208,15 @@ export async function tigerChat(
       // Format response with result
       let formattedResponse = mockResponse.response + '\n\n';
       if (mockResponse.tool === 'ls' && result.files) {
-        formattedResponse += 'Files found:\n' + result.files.map(f => `- ${f}`).join('\n');
+        formattedResponse += 'Files found:\n' + result.files.map((f: string) => `- ${f}`).join('\n');
       } else if (mockResponse.tool === 'read_file' && result.content) {
         formattedResponse += 'File content:\n```\n' + result.content + '\n```';
       } else if (mockResponse.tool === 'grep' && result.matches) {
-        formattedResponse += 'Matches found:\n' + result.matches.map(m => 
+        formattedResponse += 'Matches found:\n' + result.matches.map((m: any) => 
           `- ${m.file}:${m.line}: ${m.content}`
         ).join('\n');
       } else if (mockResponse.tool === 'glob' && result.files) {
-        formattedResponse += 'Files found:\n' + result.files.map(f => `- ${f}`).join('\n');
+        formattedResponse += 'Files found:\n' + result.files.map((f: string) => `- ${f}`).join('\n');
       } else if (mockResponse.tool === 'shell') {
         formattedResponse += 'Command output:\n```\n' + result.stdout + '\n```';
       }

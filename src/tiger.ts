@@ -220,7 +220,7 @@ ${executionHistory.map((exec, idx) =>
     exec.tool === 'write_file' ? 'File created successfully' :
     exec.tool === 'read_file' ? `Read ${exec.result.content.length} characters` :
     exec.tool === 'ls' ? `Found ${exec.result.files.length} files` :
-    exec.tool === 'run_command' ? 'Command executed' :
+    exec.tool === 'shell' ? 'Command executed' :
     'Completed'
   }`
 ).join('\n')}
