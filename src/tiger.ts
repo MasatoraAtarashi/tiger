@@ -29,6 +29,19 @@ async function callOllama(prompt: string, logger?: Logger, model?: string): Prom
         maxBuffer: 10 * 1024 * 1024,
         timeout: config.timeout
       });
+      
+      // デバッグ用に生のレスポンスをログに記録
+      if (logger) {
+        logger.log({
+          timestamp: new Date().toISOString(),
+          type: 'debug',
+          message: 'Raw Ollama output',
+          metadata: { 
+            rawLength: stdout.length,
+            rawSample: stdout.substring(0, 200).replace(/[\x00-\x1F\x7F]/g, '?')
+          }
+        });
+      }
     } catch (error: any) {
       if (error.message.includes('ollama') || error.message.includes('not found') || error.code === 'ENOENT') {
         throw new Error('Ollama is not running. Please start Ollama first with: ollama serve');
@@ -36,17 +49,32 @@ async function callOllama(prompt: string, logger?: Logger, model?: string): Prom
       throw error;
     }
     
-    // ANSIエスケープシーケンスを除去し、プログレス表示を除外
-    const cleanOutput = stdout.replace(/\[\?[0-9;]*[a-zA-Z]/g, '')
-                             .replace(/\[([0-9]+)([A-K])/g, '')
-                             .replace(/\r/g, '')
-                             .split('\n')
-                             .filter(line => !line.includes('pulling') && 
-                                           !line.includes('verifying') &&
-                                           !line.includes('[K') &&
-                                           line.trim() !== '')
-                             .join('\n')
-                             .trim();
+    // ANSIエスケープシーケンスを除去
+    let cleanOutput = stdout
+                      // ANSIエスケープシーケンスを除去
+                      .replace(/\x1b\[[0-9;]*[a-zA-Z]/g, '')
+                      .replace(/\[\?[0-9;]*[a-zA-Z]/g, '')
+                      .replace(/\[([0-9]+)([A-K])/g, '')
+                      // プログレスインジケーターを除去
+                      .replace(/⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏/g, '')
+                      .replace(/\r/g, '\n');
+    
+    // JSONオブジェクトを抽出する
+    const jsonMatch = cleanOutput.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/);
+    if (jsonMatch) {
+      cleanOutput = jsonMatch[0];
+    } else {
+      // 改行で分割してフィルタリング
+      cleanOutput = cleanOutput
+                    .split('\n')
+                    .filter(line => !line.includes('pulling') && 
+                                  !line.includes('verifying') &&
+                                  !line.includes('[K') &&
+                                  line.trim() !== '' &&
+                                  !line.match(/^\s*$/))
+                    .join('\n')
+                    .trim();
+    }
     
     if (logger) {
       logger.log({
@@ -54,8 +82,10 @@ async function callOllama(prompt: string, logger?: Logger, model?: string): Prom
         type: 'ollama_response',
         message: 'Received Ollama response',
         metadata: { 
-          responseLength: cleanOutput.length,
-          response: cleanOutput.substring(0, 500) + (cleanOutput.length > 500 ? '...' : '')
+          originalLength: stdout.length,
+          cleanedLength: cleanOutput.length,
+          response: cleanOutput.substring(0, 500) + (cleanOutput.length > 500 ? '...' : ''),
+          firstLine: cleanOutput.split('\n')[0] || 'EMPTY'
         }
       });
     }
@@ -201,10 +231,10 @@ If the task is complete or you just need to provide information, respond with ON
 {"response": "your response here"}
 
 Available tools:
-- ls: List directory contents. Args: {"path": "./"}
-- read_file: Read a file. Args: {"path": "file.txt"}
-- write_file: Write content to a file. Args: {"path": "file.txt", "content": "content"}
-- run_command: Execute a command. Args: {"command": "echo hello"}
+- ls: List directory contents. Use this for listing files. Args: {"path": "./"}
+- read_file: Read a file content. Args: {"path": "file.txt"}
+- write_file: Write/create a file. Args: {"path": "file.txt", "content": "content"}
+- run_command: Execute shell commands. Args: {"command": "echo hello"}
 
 IMPORTANT: 
 1. Respond with ONLY JSON, nothing else.
