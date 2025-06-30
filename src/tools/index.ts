@@ -210,10 +210,8 @@ export const CompleteTool: Tool = {
       `⏰ Completed at: ${timestamp}`
     ].filter(Boolean).join('\n');
     
-    // ログに記録（実際の実装では Logger に記録）
-    console.log('\n' + '='.repeat(60));
-    console.log(report);
-    console.log('='.repeat(60) + '\n');
+    // コンソール出力を削除（JSON応答を壊すため）
+    // ログは tiger.ts の Logger で記録される
     
     return { report, timestamp };
   }

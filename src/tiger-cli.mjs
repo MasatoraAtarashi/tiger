@@ -20,7 +20,7 @@ const TIGER_ASCII = `
 `;
 
 // TypeScriptのtigerモジュールを動的にロード
-const runTigerChat = async (userInput) => {
+const runTigerChat = async (userInput, skipConfirmation = false) => {
   // ユーザー入力をログに記録
   logger.log('user', userInput);
   
@@ -30,7 +30,7 @@ const runTigerChat = async (userInput) => {
       const { Logger } = require('./src/logger');
       const logger = new Logger();
       
-      tigerChat('${userInput.replace(/'/g, "\\'")}', logger)
+      tigerChat('${userInput.replace(/'/g, "\\'")}', logger, ${skipConfirmation})
         .then((result) => {
           console.log(JSON.stringify(result));
           logger.close();
@@ -88,6 +88,7 @@ const TigerCLI = () => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [toolLogs, setToolLogs] = useState([]);
   const [currentLogPath, setCurrentLogPath] = useState(null);
+  const [pendingConfirmation, setPendingConfirmation] = useState(null);
   const { exit } = useApp();
   
   // ロガーの初期化とロゴ表示
@@ -126,12 +127,12 @@ const TigerCLI = () => {
     };
   }, []);
 
-  const processUserInput = async (userInput) => {
+  const processUserInput = async (userInput, skipConfirmation = false) => {
     setIsProcessing(true);
     setToolLogs([]);
     
     try {
-      const result = await runTigerChat(userInput);
+      const result = await runTigerChat(userInput, skipConfirmation);
       
       // ログを表示
       if (result.logs) {
@@ -152,6 +153,11 @@ const TigerCLI = () => {
           
           await new Promise(resolve => setTimeout(resolve, delay));
         }
+      }
+      
+      // 確認が必要な場合
+      if (result.requiresConfirmation) {
+        setPendingConfirmation(result.requiresConfirmation);
       }
       
       // レスポンスを追加
@@ -190,7 +196,30 @@ const TigerCLI = () => {
         }
         
         setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-        processUserInput(userMessage);
+        
+        // 確認待ちの場合
+        if (pendingConfirmation) {
+          if (userMessage.toLowerCase() === 'yes') {
+            // 元のリクエストを確認付きで再実行
+            const originalRequest = `Please execute the ${pendingConfirmation.tool} tool with the following arguments: ${JSON.stringify(pendingConfirmation.args)}`;
+            processUserInput(originalRequest, true);
+            setPendingConfirmation(null);
+          } else if (userMessage.toLowerCase() === 'no') {
+            setMessages(prev => [...prev, { 
+              role: 'assistant', 
+              content: 'Tool execution cancelled.' 
+            }]);
+            setPendingConfirmation(null);
+          } else {
+            setMessages(prev => [...prev, { 
+              role: 'assistant', 
+              content: 'Please respond with "yes" to proceed or "no" to cancel.' 
+            }]);
+          }
+        } else {
+          processUserInput(userMessage);
+        }
+        
         setInputValue('');
       }
       return;

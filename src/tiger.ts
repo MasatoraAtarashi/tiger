@@ -117,9 +117,13 @@ function extractJson(response: string): any {
 }
 
 // Tiger CLIのメイン関数
-export async function tigerChat(userInput: string, logger?: Logger): Promise<{
+export async function tigerChat(userInput: string, logger?: Logger, skipConfirmation: boolean = false): Promise<{
   response: string;
   logs: Array<{ type: string; message: string }>;
+  requiresConfirmation?: {
+    tool: string;
+    args: any;
+  };
 }> {
   const logs: Array<{ type: string; message: string }> = [];
   const tools = createToolRegistry();
@@ -185,6 +189,20 @@ export async function tigerChat(userInput: string, logger?: Logger): Promise<{
   if (parsed.tool && tools[parsed.tool]) {
     logs.push({ type: 'info', message: '🎯 Identified required action...' });
     logs.push({ type: 'tool', message: `🔧 Selected tool: ${parsed.tool}` });
+    
+    // ユーザー確認が必要な場合
+    if (!skipConfirmation) {
+      logs.push({ type: 'confirm', message: `⚠️ Tool execution requires confirmation: ${parsed.tool}` });
+      return {
+        response: `I'd like to execute the "${parsed.tool}" tool with the following parameters:\n\n${JSON.stringify(parsed.args, null, 2)}\n\nPlease type "yes" to proceed or "no" to cancel.`,
+        logs,
+        requiresConfirmation: {
+          tool: parsed.tool,
+          args: parsed.args
+        }
+      };
+    }
+    
     logs.push({ type: 'info', message: '🔄 Preparing tool execution...' });
     logs.push({ type: 'exec', message: `⚡ Executing with args: ${JSON.stringify(parsed.args)}` });
     
