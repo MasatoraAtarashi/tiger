@@ -12,6 +12,8 @@ build/
 !src/**/*.mjs
 !examples/**/*.js
 !examples/**/*.mjs
+!integration-tests/**/*.js
+!integration-tests/**/*.mjs
 
 # TypeScript
 *.tsbuildinfo
