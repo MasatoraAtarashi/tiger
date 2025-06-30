@@ -424,25 +424,30 @@ const TigerCLI = () => {
           if (userMessage.toLowerCase().startsWith('/history')) {
             if (historyManager) {
               const args = userMessage.split(' ').slice(1);
-              let historyOutput = '';
               
-              if (args[0] === 'clear') {
-                await historyManager.clear();
-                historyOutput = '🗑️ History cleared';
-              } else if (args[0] === 'search' && args[1]) {
-                const query = args.slice(1).join(' ');
-                const results = historyManager.search(query);
-                historyOutput = historyManager.formatHistory(results, args.includes('-v'));
-              } else {
-                const count = args[0] ? parseInt(args[0]) : 10;
-                const history = historyManager.getRecent(count);
-                historyOutput = historyManager.formatHistory(history, args.includes('-v'));
-              }
+              // 非同期処理を別関数で実行
+              (async () => {
+                let historyOutput = '';
+                
+                if (args[0] === 'clear') {
+                  await historyManager.clear();
+                  historyOutput = '🗑️ History cleared';
+                } else if (args[0] === 'search' && args[1]) {
+                  const query = args.slice(1).join(' ');
+                  const results = historyManager.search(query);
+                  historyOutput = historyManager.formatHistory(results, args.includes('-v'));
+                } else {
+                  const count = args[0] ? parseInt(args[0]) : 10;
+                  const history = historyManager.getRecent(count);
+                  historyOutput = historyManager.formatHistory(history, args.includes('-v'));
+                }
+                
+                setMessages(prev => [...prev, 
+                  { role: 'user', content: userMessage },
+                  { role: 'system', content: historyOutput }
+                ]);
+              })();
               
-              setMessages(prev => [...prev, 
-                { role: 'user', content: userMessage },
-                { role: 'system', content: historyOutput }
-              ]);
               setInputValue('');
               return;
             }
