@@ -51,8 +51,12 @@ let historyManager = null;
 // 初期化関数
 const initializeManagers = async () => {
   try {
-    const { MessageProcessor } = await import('./message-processor.js');
-    const { HistoryManager } = await import('./history-manager.js');
+    // CommonJSモジュールを動的にrequire
+    const { createRequire } = await import('module');
+    const require = createRequire(import.meta.url);
+    
+    const { MessageProcessor } = require('../dist/message-processor.js');
+    const { HistoryManager } = require('../dist/history-manager.js');
     
     messageProcessor = new MessageProcessor();
     historyManager = new HistoryManager();
