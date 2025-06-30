@@ -257,7 +257,7 @@ const TigerCLI = () => {
     // 入力フィールド（虎柄風）
     React.createElement(Box, { borderStyle: 'bold', borderColor: 'yellow', padding: 1, marginTop: 1 },
       React.createElement(Text, { color: isProcessing ? 'yellow' : 'green' },
-        isProcessing ? '🐯 Tiger is hunting for answers...' : `🐾 ${inputValue}█`
+        isProcessing ? '⏳ Tiger is thinking...' : `> ${inputValue}█`
       )
     ),
     
