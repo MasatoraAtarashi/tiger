@@ -59,7 +59,7 @@ const runTigerChat = async (userInput, skipConfirmation = false) => {
   
   return new Promise((resolve) => {
     const child = spawn('npx', ['ts-node', '--transpile-only', '-e', `
-      const { tigerChat } = require('./src/tiger-final');
+      const { tigerChat } = require('./src/tiger');
       const { Logger } = require('./src/logger');
       const logger = new Logger();
       
