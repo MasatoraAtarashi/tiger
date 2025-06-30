@@ -108,7 +108,17 @@ function extractJson(response: string): any {
     if (jsonMatches && jsonMatches.length > 0) {
       // 最後のJSONオブジェクトを使用（通常、これがツール呼び出しまたは最終回答）
       const lastJson = jsonMatches[jsonMatches.length - 1];
-      return JSON.parse(lastJson);
+      try {
+        return JSON.parse(lastJson);
+      } catch (e) {
+        // 最後のJSONが無効な場合、すべてのJSONを試す
+        for (let i = jsonMatches.length - 2; i >= 0; i--) {
+          try {
+            return JSON.parse(jsonMatches[i]);
+          } catch {}
+        }
+        throw e; // すべて失敗したら元のエラーを投げる
+      }
     }
   } catch (error) {
     console.error('Failed to parse JSON:', error);

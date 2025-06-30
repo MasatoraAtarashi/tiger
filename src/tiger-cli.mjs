@@ -9,15 +9,18 @@ import { SimpleLogger } from './simple-logger.mjs';
 // ロガーインスタンスを作成
 const logger = new SimpleLogger();
 
-// TIGERのASCIIアート
-const TIGER_ASCII = `
- ███████╗ ██╗  ██████╗  ███████╗ ██████╗ 
- ╚══██╔══╝ ██║ ██╔════╝  ██╔════╝ ██╔══██╗
-    ██║    ██║ ██║  ███╗ █████╗   ██████╔╝
-    ██║    ██║ ██║   ██║ ██╔══╝   ██╔══██╗
-    ██║    ██║ ╚██████╔╝ ███████╗ ██║  ██║
-    ╚═╝    ╚═╝  ╚═════╝  ╚══════╝ ╚═╝  ╚═╝
-`;
+// TIGERのASCIIアート（行ごとに分割）
+const TIGER_ASCII_LINES = [
+  ' ███████╗ ██╗  ██████╗  ███████╗ ██████╗ ',
+  ' ╚══██╔══╝ ██║ ██╔════╝  ██╔════╝ ██╔══██╗',
+  '    ██║    ██║ ██║  ███╗ █████╗   ██████╔╝',
+  '    ██║    ██║ ██║   ██║ ██╔══╝   ██╔══██╗',
+  '    ██║    ██║ ╚██████╔╝ ███████╗ ██║  ██║',
+  '    ╚═╝    ╚═╝  ╚═════╝  ╚══════╝ ╚═╝  ╚═╝'
+];
+
+// グラデーション色（黄色から赤へ）
+const GRADIENT_COLORS = ['yellow', 'yellow', 'yellowBright', 'redBright', 'red', 'red'];
 
 // TypeScriptのtigerモジュールを動的にロード
 const runTigerChat = async (userInput, skipConfirmation = false) => {
@@ -291,7 +294,16 @@ const TigerCLI = () => {
       height: '100%'
     },
       React.createElement(Box, { flexDirection: 'column', alignItems: 'center' },
-        React.createElement(Text, { color: 'yellow' }, TIGER_ASCII),
+        // グラデーションロゴ
+        React.createElement(Box, { flexDirection: 'column' },
+          TIGER_ASCII_LINES.map((line, index) => 
+            React.createElement(Text, { 
+              key: index, 
+              color: GRADIENT_COLORS[index] || 'yellow',
+              bold: true
+            }, line)
+          )
+        ),
         React.createElement(Box, { marginTop: 2 },
           React.createElement(Text, { color: 'cyan', bold: true }, 'Your CLI Coding Agent')
         ),
