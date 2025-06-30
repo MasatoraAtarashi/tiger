@@ -4,8 +4,15 @@
   "description": "Tiger - A powerful CLI coding agent powered by Ollama",
   "main": "src/tiger.ts",
   "bin": {
-    "tiger": "./dist/tiger-cli.js"
+    "tiger": "./src/tiger-cli.mjs"
   },
+  "files": [
+    "dist/",
+    "src/**/*.mjs",
+    "src/VERSION",
+    "README.md",
+    "LICENSE"
+  ],
   "scripts": {
     "start": "node src/tiger-cli.mjs",
     "start:improved": "node src/tiger-cli-improved.mjs",
@@ -36,11 +43,11 @@
     "coding",
     "assistant"
   ],
-  "author": "Your Name",
+  "author": "Masatora Atarashi",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/yourusername/tiger-cli.git"
+    "url": "https://github.com/MasatoraAtarashi/tiger.git"
   },
   "dependencies": {
     "@mastra/core": "^0.10.8",

@@ -1,0 +1,43 @@
+# Source files (only publish compiled files)
+src/
+*.ts
+!*.d.ts
+
+# Development files
+.git/
+.github/
+.vscode/
+.idea/
+
+# Test files
+test/
+test-output/
+integration-tests/
+*.test.*
+*.spec.*
+
+# Documentation source
+docs/
+
+# Configuration files
+.eslintrc*
+.prettierrc*
+tsconfig.json
+tsconfig.*.json
+
+# Log files
+*.log
+logs/
+
+# Environment files
+.env
+.env.*
+
+# Other
+.DS_Store
+screenshot.png
+examples/
+test-tiger.mjs
+
+# Build artifacts that shouldn't be published
+*.tsbuildinfo
