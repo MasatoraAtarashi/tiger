@@ -89,6 +89,7 @@ const TigerCLI = () => {
   const [toolLogs, setToolLogs] = useState([]);
   const [currentLogPath, setCurrentLogPath] = useState(null);
   const [pendingConfirmation, setPendingConfirmation] = useState(null);
+  const [selectedOption, setSelectedOption] = useState(0);
   const { exit } = useApp();
   
   // ロガーの初期化とロゴ表示
@@ -181,7 +182,76 @@ const TigerCLI = () => {
 
   useInput((input, key) => {
     if (key.escape || (key.ctrl && input === 'c')) {
+      if (pendingConfirmation && key.escape) {
+        // ESCで確認をキャンセル
+        setMessages(prev => [...prev, { 
+          role: 'assistant', 
+          content: 'Tool execution cancelled.' 
+        }]);
+        setPendingConfirmation(null);
+        setSelectedOption(0);
+        return;
+      }
       exit();
+      return;
+    }
+
+    // 確認メニューの操作
+    if (pendingConfirmation) {
+      if (key.upArrow) {
+        setSelectedOption(prev => Math.max(0, prev - 1));
+        return;
+      }
+      if (key.downArrow) {
+        setSelectedOption(prev => Math.min(2, prev + 1));
+        return;
+      }
+      if (key.return) {
+        if (selectedOption === 0) {
+          // Yes - 実行
+          const originalRequest = `Please execute the ${pendingConfirmation.tool} tool with the following arguments: ${JSON.stringify(pendingConfirmation.args)}`;
+          processUserInput(originalRequest, true);
+          setPendingConfirmation(null);
+          setSelectedOption(0);
+        } else if (selectedOption === 1) {
+          // Yes, and don't ask again (将来の実装用)
+          const originalRequest = `Please execute the ${pendingConfirmation.tool} tool with the following arguments: ${JSON.stringify(pendingConfirmation.args)}`;
+          processUserInput(originalRequest, true);
+          setPendingConfirmation(null);
+          setSelectedOption(0);
+        } else if (selectedOption === 2) {
+          // No
+          setMessages(prev => [...prev, { 
+            role: 'assistant', 
+            content: 'Tool execution cancelled. What would you like me to do instead?' 
+          }]);
+          setPendingConfirmation(null);
+          setSelectedOption(0);
+        }
+        return;
+      }
+      if ((input >= '1' && input <= '3')) {
+        // 数字キーでの選択
+        const option = parseInt(input) - 1;
+        setSelectedOption(option);
+        // 自動的に選択を確定
+        setTimeout(() => {
+          if (option === 0 || option === 1) {
+            const originalRequest = `Please execute the ${pendingConfirmation.tool} tool with the following arguments: ${JSON.stringify(pendingConfirmation.args)}`;
+            processUserInput(originalRequest, true);
+            setPendingConfirmation(null);
+            setSelectedOption(0);
+          } else if (option === 2) {
+            setMessages(prev => [...prev, { 
+              role: 'assistant', 
+              content: 'Tool execution cancelled. What would you like me to do instead?' 
+            }]);
+            setPendingConfirmation(null);
+            setSelectedOption(0);
+          }
+        }, 100);
+        return;
+      }
       return;
     }
 
@@ -196,30 +266,7 @@ const TigerCLI = () => {
         }
         
         setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
-        
-        // 確認待ちの場合
-        if (pendingConfirmation) {
-          if (userMessage.toLowerCase() === 'yes') {
-            // 元のリクエストを確認付きで再実行
-            const originalRequest = `Please execute the ${pendingConfirmation.tool} tool with the following arguments: ${JSON.stringify(pendingConfirmation.args)}`;
-            processUserInput(originalRequest, true);
-            setPendingConfirmation(null);
-          } else if (userMessage.toLowerCase() === 'no') {
-            setMessages(prev => [...prev, { 
-              role: 'assistant', 
-              content: 'Tool execution cancelled.' 
-            }]);
-            setPendingConfirmation(null);
-          } else {
-            setMessages(prev => [...prev, { 
-              role: 'assistant', 
-              content: 'Please respond with "yes" to proceed or "no" to cancel.' 
-            }]);
-          }
-        } else {
-          processUserInput(userMessage);
-        }
-        
+        processUserInput(userMessage);
         setInputValue('');
       }
       return;
@@ -310,12 +357,44 @@ const TigerCLI = () => {
       )
     ),
     
-    // 入力フィールド（虎柄風）
-    React.createElement(Box, { borderStyle: 'bold', borderColor: 'yellow', padding: 1, marginTop: 1 },
-      React.createElement(Text, { color: isProcessing ? 'yellow' : 'green' },
-        isProcessing ? '⏳ Tiger is thinking...' : `> ${inputValue}█`
-      )
-    ),
+    // 確認ダイアログまたは入力フィールド
+    pendingConfirmation ? 
+      React.createElement(Box, { borderStyle: 'double', borderColor: 'cyan', padding: 1, marginTop: 1, flexDirection: 'column' },
+        React.createElement(Box, { marginBottom: 1 },
+          React.createElement(Text, { bold: true, color: 'cyan' }, `🔧 ${pendingConfirmation.tool.toUpperCase()}`)
+        ),
+        React.createElement(Box, { marginBottom: 1 },
+          React.createElement(Text, { color: 'white' }, 
+            `Tiger wants to execute ${pendingConfirmation.tool} with:`
+          )
+        ),
+        React.createElement(Box, { marginBottom: 1, paddingLeft: 2 },
+          React.createElement(Text, { color: 'gray' }, 
+            JSON.stringify(pendingConfirmation.args, null, 2).split('\n').map((line, i) => 
+              i === 0 ? line : '  ' + line
+            ).join('\n')
+          )
+        ),
+        React.createElement(Box, { marginTop: 1 },
+          React.createElement(Text, { bold: true }, 'Do you want to allow this action?')
+        ),
+        React.createElement(Box, { flexDirection: 'column', marginTop: 1 },
+          React.createElement(Text, { color: selectedOption === 0 ? 'green' : 'gray' },
+            `${selectedOption === 0 ? '❯' : ' '} 1. Yes`
+          ),
+          React.createElement(Text, { color: selectedOption === 1 ? 'yellow' : 'gray' },
+            `${selectedOption === 1 ? '❯' : ' '} 2. Yes, and don't ask again for ${pendingConfirmation.tool}`
+          ),
+          React.createElement(Text, { color: selectedOption === 2 ? 'red' : 'gray' },
+            `${selectedOption === 2 ? '❯' : ' '} 3. No, and tell Tiger what to do differently (esc)`
+          )
+        )
+      ) :
+      React.createElement(Box, { borderStyle: 'bold', borderColor: 'yellow', padding: 1, marginTop: 1 },
+        React.createElement(Text, { color: isProcessing ? 'yellow' : 'green' },
+          isProcessing ? '⏳ Tiger is thinking...' : `> ${inputValue}█`
+        )
+      ),
     
     // ヘルプテキスト
     React.createElement(Box, { marginTop: 1, flexDirection: 'column' },

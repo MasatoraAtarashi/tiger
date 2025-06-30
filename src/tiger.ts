@@ -194,7 +194,7 @@ export async function tigerChat(userInput: string, logger?: Logger, skipConfirma
     if (!skipConfirmation) {
       logs.push({ type: 'confirm', message: `⚠️ Tool execution requires confirmation: ${parsed.tool}` });
       return {
-        response: `I'd like to execute the "${parsed.tool}" tool with the following parameters:\n\n${JSON.stringify(parsed.args, null, 2)}\n\nPlease type "yes" to proceed or "no" to cancel.`,
+        response: `Tool execution request`,
         logs,
         requiresConfirmation: {
           tool: parsed.tool,
