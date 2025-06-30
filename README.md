@@ -26,6 +26,8 @@ ollama pull gemma3:4b
 
 ## Installation
 
+### Local Development
+
 ```bash
 # Clone the repository
 git clone https://github.com/yourusername/tiger-cli.git
@@ -36,6 +38,16 @@ npm install
 
 # Run Tiger CLI
 npm start
+```
+
+### Global Installation
+
+```bash
+# Install globally to use 'tiger' command anywhere
+npm install -g .
+
+# Now you can run Tiger from anywhere
+tiger
 ```
 
 ## Usage
