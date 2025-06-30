@@ -183,6 +183,42 @@ export const MemoryTool: Tool = {
   }
 };
 
+// タスク完了報告ツール
+export const CompleteTool: Tool = {
+  id: 'complete',
+  description: 'Report task completion with summary of work done',
+  inputSchema: z.object({
+    task: z.string().describe('The task that was completed'),
+    summary: z.string().describe('Summary of what was done'),
+    files_modified: z.array(z.string()).optional().describe('List of files that were modified'),
+    commands_executed: z.array(z.string()).optional().describe('List of commands that were executed'),
+    result: z.enum(['success', 'partial', 'failed']).describe('Result of the task')
+  }),
+  outputSchema: z.object({
+    report: z.string(),
+    timestamp: z.string()
+  }),
+  execute: async ({ task, summary, files_modified = [], commands_executed = [], result }) => {
+    const timestamp = new Date().toISOString();
+    
+    const report = [
+      `🎯 Task Completed: ${task}`,
+      `📊 Status: ${result === 'success' ? '✅ Success' : result === 'partial' ? '⚠️ Partial' : '❌ Failed'}`,
+      `📝 Summary: ${summary}`,
+      files_modified.length > 0 ? `📁 Files Modified:\n${files_modified.map((f: string) => `   - ${f}`).join('\n')}` : '',
+      commands_executed.length > 0 ? `⚡ Commands Executed:\n${commands_executed.map((c: string) => `   - ${c}`).join('\n')}` : '',
+      `⏰ Completed at: ${timestamp}`
+    ].filter(Boolean).join('\n');
+    
+    // ログに記録（実際の実装では Logger に記録）
+    console.log('\n' + '='.repeat(60));
+    console.log(report);
+    console.log('='.repeat(60) + '\n');
+    
+    return { report, timestamp };
+  }
+};
+
 // ツールレジストリ作成関数
 export function createToolRegistry(config?: {
   coreTools?: string[];
@@ -196,7 +232,8 @@ export function createToolRegistry(config?: {
     glob: GlobTool,
     shell: ShellTool,
     web_fetch: WebFetchTool,
-    memory: MemoryTool
+    memory: MemoryTool,
+    complete: CompleteTool
   };
 
   // coreToolsが指定されている場合は、それだけを使用

@@ -24,7 +24,11 @@ When providing a final answer, respond with:
   "answer": "Your response to the user"
 }
 
-IMPORTANT: Always use tools when possible to provide accurate information. Be helpful and concise.`;
+IMPORTANT RULES:
+1. Always use tools when possible to provide accurate information.
+2. When you complete a task (like creating files, running commands, or modifying code), ALWAYS use the "complete" tool to report what you did.
+3. Be helpful and concise.
+4. Track all files you modify and commands you execute for the complete tool report.`;
 
 // ツール定義をプロンプト用に変換
 function toolsToPrompt(tools: ReturnType<typeof createToolRegistry>): string {
