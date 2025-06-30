@@ -1,3 +1,5 @@
+#!/usr/bin/env node
+
 import React, { useState, useEffect } from 'react';
 import { render, Text, Box, useInput, useApp } from 'ink';
 import Spinner from 'ink-spinner';
@@ -6,6 +8,16 @@ import { SimpleLogger } from './simple-logger.mjs';
 
 // ロガーインスタンスを作成
 const logger = new SimpleLogger();
+
+// TIGERのASCIIアート
+const TIGER_ASCII = `
+ ███████╗ ██╗  ██████╗  ███████╗ ██████╗ 
+ ╚══██╔══╝ ██║ ██╔════╝  ██╔════╝ ██╔══██╗
+    ██║    ██║ ██║  ███╗ █████╗   ██████╔╝
+    ██║    ██║ ██║   ██║ ██╔══╝   ██╔══██╗
+    ██║    ██║ ╚██████╔╝ ███████╗ ██║  ██║
+    ╚═╝    ╚═╝  ╚═════╝  ╚══════╝ ╚═╝  ╚═╝
+`;
 
 // TypeScriptのtigerモジュールを動的にロード
 const runTigerChat = async (userInput) => {
@@ -70,23 +82,29 @@ const runTigerChat = async (userInput) => {
 };
 
 const TigerCLI = () => {
-  const [messages, setMessages] = useState([
-    { role: 'system', content: '🐯 Welcome to Tiger - Your CLI Coding Agent!' },
-    { role: 'system', content: 'I can help you with file operations, shell commands, and more.' }
-  ]);
+  const [messages, setMessages] = useState([]);
+  const [showLogo, setShowLogo] = useState(true);
   const [inputValue, setInputValue] = useState('');
   const [isProcessing, setIsProcessing] = useState(false);
   const [toolLogs, setToolLogs] = useState([]);
   const [currentLogPath, setCurrentLogPath] = useState(null);
   const { exit } = useApp();
   
-  // ロガーの初期化
+  // ロガーの初期化とロゴ表示
   useEffect(() => {
     setCurrentLogPath(logger.getLogFilePath());
-    setMessages(prev => [...prev, {
-      role: 'system',
-      content: `📝 Session log: ${logger.getLogFilePath()}`
-    }]);
+    // ロゴを表示してからメッセージを追加
+    setTimeout(() => {
+      setShowLogo(false);
+      setMessages([
+        { role: 'system', content: '🐯 Welcome to Tiger - Your CLI Coding Agent!' },
+        { role: 'system', content: 'Tips for getting started:' },
+        { role: 'system', content: '1. Ask questions, edit files, or run commands' },
+        { role: 'system', content: '2. Be specific for the best results' },
+        { role: 'system', content: '3. Type /help for more information or /quit to exit' },
+        { role: 'system', content: `📝 Session log: ${logger.getLogFilePath()}`}
+      ]);
+    }, 2000);
     
     return () => {
       logger.close();
@@ -138,6 +156,13 @@ const TigerCLI = () => {
     if (key.return) {
       if (inputValue.trim()) {
         const userMessage = inputValue.trim();
+        
+        // /quitコマンドのチェック
+        if (userMessage.toLowerCase() === '/quit') {
+          exit();
+          return;
+        }
+        
         setMessages(prev => [...prev, { role: 'user', content: userMessage }]);
         processUserInput(userMessage);
         setInputValue('');
@@ -155,11 +180,39 @@ const TigerCLI = () => {
     }
   });
 
+  // ロゴ表示中
+  if (showLogo) {
+    return React.createElement(Box, { 
+      flexDirection: 'column', 
+      alignItems: 'center', 
+      justifyContent: 'center',
+      height: '100%'
+    },
+      React.createElement(Box, { flexDirection: 'column', alignItems: 'center' },
+        React.createElement(Text, { color: 'yellow' }, TIGER_ASCII),
+        React.createElement(Box, { marginTop: 2 },
+          React.createElement(Text, { color: 'cyan', bold: true }, 'Your CLI Coding Agent')
+        ),
+        React.createElement(Box, { marginTop: 1 },
+          React.createElement(Text, { color: 'gray' }, 'Powered by Ollama + Mastra')
+        ),
+        React.createElement(Box, { marginTop: 2 },
+          React.createElement(Spinner, { type: 'dots' }),
+          React.createElement(Text, { color: 'gray' }, ' Initializing...')
+        )
+      )
+    );
+  }
+
   return React.createElement(Box, { flexDirection: 'column', padding: 1 },
-    // ヘッダー
-    React.createElement(Box, { borderStyle: 'round', borderColor: 'cyan', flexDirection: 'column', padding: 1 },
-      React.createElement(Text, { bold: true, color: 'cyan' }, '🐯 Tiger CLI Agent'),
-      React.createElement(Text, { color: 'gray' }, 'Powered by Ollama + Mastra')
+    // ヘッダー（虎柄風のボーダー）
+    React.createElement(Box, { borderStyle: 'double', borderColor: 'yellow', flexDirection: 'column', padding: 1 },
+      React.createElement(Box, { justifyContent: 'center' },
+        React.createElement(Text, { bold: true, color: 'yellow' }, '🐯 TIGER CLI AGENT 🐯')
+      ),
+      React.createElement(Box, { justifyContent: 'center' },
+        React.createElement(Text, { color: 'gray' }, 'Powered by Ollama + Mastra')
+      )
     ),
     
     // メッセージ履歴
@@ -201,17 +254,17 @@ const TigerCLI = () => {
       )
     ),
     
-    // 入力フィールド
-    React.createElement(Box, { borderStyle: 'single', borderColor: 'green', padding: 1, marginTop: 1 },
-      React.createElement(Text, { color: 'green' },
-        isProcessing ? '⏳ Tiger is thinking...' : `> ${inputValue}█`
+    // 入力フィールド（虎柄風）
+    React.createElement(Box, { borderStyle: 'bold', borderColor: 'yellow', padding: 1, marginTop: 1 },
+      React.createElement(Text, { color: isProcessing ? 'yellow' : 'green' },
+        isProcessing ? '🐯 Tiger is hunting for answers...' : `🐾 ${inputValue}█`
       )
     ),
     
     // ヘルプテキスト
     React.createElement(Box, { marginTop: 1, flexDirection: 'column' },
       React.createElement(Text, { dimColor: true }, 'Commands: "List files", "Read <filename>", "Run <command>"'),
-      React.createElement(Text, { dimColor: true }, 'Press ESC or Ctrl+C to exit'),
+      React.createElement(Text, { dimColor: true }, 'Type /quit or press ESC/Ctrl+C to exit'),
       currentLogPath && React.createElement(Text, { dimColor: true }, `Log file: ${currentLogPath}`)
     )
   );
