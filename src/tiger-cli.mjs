@@ -25,7 +25,12 @@ const runTigerChat = async (userInput) => {
   logger.log('user', userInput);
   
   return new Promise((resolve) => {
-    const child = spawn('npx', ['ts-node', '--transpile-only', '-e', `
+    const child = spawn('npx', ['ts-node', '--transpile-only', '--no-cache', '-e', `
+      // Clear require cache to ensure latest code is loaded
+      delete require.cache[require.resolve('./src/tiger')];
+      delete require.cache[require.resolve('./src/logger')];
+      delete require.cache[require.resolve('./src/tools')];
+      
       const { tigerChat } = require('./src/tiger');
       const { Logger } = require('./src/logger');
       const logger = new Logger();
@@ -97,9 +102,13 @@ const TigerCLI = () => {
     const getCommitHash = () => {
       try {
         const { execSync } = require('child_process');
-        const hash = execSync('git rev-parse --short HEAD', { encoding: 'utf-8' }).trim();
+        const hash = execSync('git rev-parse --short HEAD', { 
+          encoding: 'utf-8',
+          cwd: process.cwd()
+        }).trim();
         return hash;
-      } catch {
+      } catch (error) {
+        console.error('Git hash error:', error.message);
         return 'unknown';
       }
     };
