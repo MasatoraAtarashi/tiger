@@ -2,101 +2,101 @@
 
 ![Tiger CLI](https://raw.githubusercontent.com/MasatoraAtarashi/tiger/main/screenshot.png)
 
-ローカルLLMを使用したパワフルなコーディングエージェント。自然言語でコーディングタスクを実行できます。
+A powerful coding agent powered by local LLMs. Execute coding tasks using natural language.
 
-## 必要なもの
+## Requirements
 
-- Node.js 18以上
-- [Ollama](https://ollama.ai/)（ローカルLLM実行環境）
+- Node.js 18+
+- [Ollama](https://ollama.ai/) (Local LLM runtime)
 
-## インストール
+## Installation
 
 ```bash
-# Ollamaをインストール
+# Install Ollama
 curl -fsSL https://ollama.ai/install.sh | sh
 
-# デフォルトのモデルをダウンロード
+# Download the default model
 ollama pull llama3.2:3b
 
-# Tigerをインストール
+# Install Tiger
 npm install -g @truetiger/tiger
 ```
 
-## 使い方
+## Usage
 
 ```bash
-# Tigerを起動
+# Start Tiger
 tiger
 
-# 以下のような自然言語でタスクを指示できます：
-> ファイルを一覧表示して
-> package.jsonを読んで
-> hello.txtというファイルを作成して
-> npm testを実行して
+# Give it tasks in natural language:
+> List all files
+> Read package.json
+> Create a file called hello.txt
+> Run npm test
 
-# ファイルを含めてメッセージを送信
-> このコードをレビューして @src/index.js @package.json
+# Include file contents in your message
+> Review this code @src/index.js @package.json
 
-# 過去の会話履歴を確認
+# View chat history
 > /history 20
-> /history search エラー
+> /history search error
 > /history -v
 ```
 
-### 実装されている機能
+### Features
 
-#### ファイル操作ツール
-- 📁 **ls** - ディレクトリの内容を一覧表示
-- 📄 **read_file** - ファイルの内容を読み取り
-- ✏️ **write_file** - ファイルへの書き込み
-- 🔍 **grep** - ファイル内のパターン検索
-- 🎯 **glob** - グロブパターンでファイル検索
+#### File Operation Tools
+- 📁 **ls** - List directory contents
+- 📄 **read_file** - Read file contents
+- ✏️ **write_file** - Write to files
+- 🔍 **grep** - Search for patterns in files
+- 🎯 **glob** - Find files with glob patterns
 
-#### 実行・システムツール
-- 🔧 **shell** - シェルコマンドの実行
-- 🌐 **web_fetch** - URLからコンテンツを取得
-- 💾 **memory** - メモリへの保存・取得
+#### Execution & System Tools
+- 🔧 **shell** - Execute shell commands
+- 🌐 **web_fetch** - Fetch content from URLs
+- 💾 **memory** - Store and retrieve from memory
 
-#### タスク管理ツール
-- 📋 **plan_task** - 複数ステップのタスクプランを作成
-- ▶️ **execute_plan** - タスクプランの実行
-- ✅ **complete_step** - ステップの完了マーク
-- 📊 **get_plan_status** - タスクプランの状態確認
-- 🎯 **complete** - タスク完了の報告
+#### Task Management Tools
+- 📋 **plan_task** - Create multi-step task plans
+- ▶️ **execute_plan** - Execute task plans
+- ✅ **complete_step** - Mark steps as completed
+- 📊 **get_plan_status** - Get task plan status
+- 🎯 **complete** - Report task completion
 
-#### スラッシュコマンド
-- **/help** - 利用可能なコマンドを表示
-- **/clear** - 会話をクリア
-- **/quit** - Tigerを終了
-- **/history [count]** - 最近のチャット履歴を表示（デフォルト: 10件）
-- **/history search <query>** - チャット履歴を検索
-- **/history clear** - チャット履歴をクリア
-- **/history -v** - 詳細な履歴（使用ツール含む）を表示
-- **/memory [user|project]** - メモリファイルを編集
-- **/init** - プロジェクトメモリを初期化
-- **/status** - 現在のステータスを表示
-- **/model** - 使用中のモデルを表示
+#### Slash Commands
+- **/help** - Show available commands
+- **/clear** - Clear conversation
+- **/quit** - Exit Tiger
+- **/history [count]** - Show recent chat history (default: 10)
+- **/history search <query>** - Search chat history
+- **/history clear** - Clear chat history
+- **/history -v** - Show detailed history with tools used
+- **/memory [user|project]** - Edit memory files
+- **/init** - Initialize project memory
+- **/status** - Show current status
+- **/model** - Show current model
 
-#### その他の機能
-- 📎 **@ファイル指定** - メッセージに`@filename`でファイル内容を含める
-- 📜 **チャット履歴** - 過去の会話履歴を保存・検索（~/.tiger/history.json）
-- 🧠 プロジェクト・ユーザーレベルのメモリ管理（TIGER.md）
-- 📝 詳細なログ記録（~/.tiger/logs/）
-- 🎨 カラフルなインタラクティブUI
-- ⚡ リアルタイムストリーミング応答
+#### Other Features
+- 📎 **@file inclusion** - Include file contents with `@filename` in messages
+- 📜 **Chat history** - Save and search conversation history (~/.tiger/history.json)
+- 🧠 Project & user-level memory management (TIGER.md)
+- 📝 Detailed logging (~/.tiger/logs/)
+- 🎨 Colorful interactive UI
+- ⚡ Real-time streaming responses
 
-### 設定
+### Configuration
 
-`.tigerrc`ファイルで設定をカスタマイズできます：
+Customize settings with a `.tigerrc` file:
 
 ```json
 {
-  "model": "llama3.2:3b",      // 使用するOllamaモデル
-  "timeout": 60000,            // タイムアウト（ミリ秒）
-  "maxIterations": 10          // 最大実行ステップ数
+  "model": "llama3.2:3b",      // Ollama model to use
+  "timeout": 60000,            // Timeout in milliseconds
+  "maxIterations": 10          // Maximum execution steps
 }
 ```
 
-## ライセンス
+## License
 
 MIT License
