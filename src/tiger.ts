@@ -249,7 +249,9 @@ Available tools:
 IMPORTANT: 
 1. Respond with ONLY JSON, nothing else.
 2. For programming tasks, break them into steps: create file, implement code, test it.
-3. Always complete the entire task before responding with a final message.`;
+3. Always complete the entire task before responding with a final message.
+4. When creating summaries or documents, include actual content, not just titles.
+5. Think step by step and ensure your outputs are complete and useful.`;
     
     totalPromptLength += prompt.length;
     
