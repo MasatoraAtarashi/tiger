@@ -442,7 +442,38 @@ const TigerCLI = () => {
   return React.createElement(Box, { flexDirection: 'column', padding: 1 },
     // ヘッダー（虎柄風のボーダー）
     React.createElement(Box, { borderStyle: 'double', borderColor: 'yellow', flexDirection: 'column', padding: 1 },
+      // 小さめのTIGERロゴ
       React.createElement(Box, { justifyContent: 'center' },
+        React.createElement(Text, { bold: true, color: 'yellow' }, 
+          '████████╗ ██╗  ██████╗  ███████╗ ██████╗'
+        )
+      ),
+      React.createElement(Box, { justifyContent: 'center' },
+        React.createElement(Text, { bold: true, color: 'yellow' }, 
+          '╚══██╔══╝ ██║ ██╔════╝  ██╔════╝ ██╔══██╗'
+        )
+      ),
+      React.createElement(Box, { justifyContent: 'center' },
+        React.createElement(Text, { bold: true, color: 'yellow' }, 
+          '   ██║    ██║ ██║  ███╗ █████╗   ██████╔╝'
+        )
+      ),
+      React.createElement(Box, { justifyContent: 'center' },
+        React.createElement(Text, { bold: true, color: 'yellow' }, 
+          '   ██║    ██║ ██║   ██║ ██╔══╝   ██╔══██╗'
+        )
+      ),
+      React.createElement(Box, { justifyContent: 'center' },
+        React.createElement(Text, { bold: true, color: 'yellow' }, 
+          '   ██║    ██║ ╚██████╔╝ ███████╗ ██║  ██║'
+        )
+      ),
+      React.createElement(Box, { justifyContent: 'center' },
+        React.createElement(Text, { bold: true, color: 'yellow' }, 
+          '   ╚═╝    ╚═╝  ╚═════╝  ╚══════╝ ╚═╝  ╚═╝'
+        )
+      ),
+      React.createElement(Box, { justifyContent: 'center', marginTop: 1 },
         React.createElement(Text, { bold: true, color: 'yellow' }, '🐯 TIGER CLI AGENT 🐯')
       ),
       React.createElement(Box, { justifyContent: 'center' },
