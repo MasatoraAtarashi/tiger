@@ -3,6 +3,7 @@ import { execSync } from 'child_process';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import glob from 'fast-glob';
+import { PlanTaskTool, ExecutePlanTool, CompleteStepTool, GetPlanStatusTool } from './task-planner';
 
 // ツールの型定義
 interface Tool {
@@ -231,7 +232,11 @@ export function createToolRegistry(config?: {
     shell: ShellTool,
     web_fetch: WebFetchTool,
     memory: MemoryTool,
-    complete: CompleteTool
+    complete: CompleteTool,
+    plan_task: PlanTaskTool,
+    execute_plan: ExecutePlanTool,
+    complete_step: CompleteStepTool,
+    get_plan_status: GetPlanStatusTool
   };
 
   // coreToolsが指定されている場合は、それだけを使用

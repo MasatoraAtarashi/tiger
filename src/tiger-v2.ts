@@ -31,6 +31,7 @@ IMPORTANT RULES:
 4. Continue until all steps are completed.
 5. When all steps are done, use the "complete" tool to report the final result.
 6. Be helpful and thorough - complete the ENTIRE task, don't stop after just one step.
+7. Continue executing tools until the task is complete or you provide a final answer.
 
 Example workflow for "implement Fibonacci":
 1. Use plan_task to create steps: write file, test it, report completion
@@ -138,7 +139,16 @@ function extractJson(response: string): any {
   return null;
 }
 
-// Tiger CLIのメイン関数
+interface ConversationContext {
+  userInput: string;
+  toolExecutions: Array<{
+    tool: string;
+    args: any;
+    result: any;
+  }>;
+}
+
+// Tiger CLIのメイン関数（改良版）
 export async function tigerChat(userInput: string, logger?: Logger, skipConfirmation: boolean = false): Promise<{
   response: string;
   logs: Array<{ type: string; message: string }>;
@@ -152,7 +162,6 @@ export async function tigerChat(userInput: string, logger?: Logger, skipConfirma
   
   // システムプロンプトを生成
   const systemPrompt = TIGER_SYSTEM_PROMPT.replace('{{TOOLS}}', toolsToPrompt(tools));
-  const fullPrompt = `${systemPrompt}\n\nUser: ${userInput}`;
   
   logs.push({ type: 'info', message: '🤔 Thinking...' });
   
@@ -169,146 +178,149 @@ export async function tigerChat(userInput: string, logger?: Logger, skipConfirma
     logger.logUserInput(userInput);
   }
   
-  logs.push({ type: 'info', message: '🧠 Consulting with AI model...' });
+  // 会話コンテキストを初期化
+  const context: ConversationContext = {
+    userInput,
+    toolExecutions: []
+  };
   
-  // Ollamaに送信
-  let ollamaResponse: string;
-  try {
-    ollamaResponse = await callOllama(fullPrompt, logger);
-  } catch (error: any) {
-    logs.push({ type: 'error', message: `Ollama error: ${error.message}` });
-    return {
-      response: `Failed to connect to Ollama: ${error.message}`,
-      logs
-    };
-  }
+  // 最大実行回数（無限ループ防止）
+  const MAX_ITERATIONS = 20;
+  let iterations = 0;
   
-  logs.push({ type: 'info', message: '🔍 Parsing AI response...' });
-  
-  const parsed = extractJson(ollamaResponse);
-  
-  if (!parsed) {
-    return {
-      response: "I'm sorry, I couldn't understand the response format.",
-      logs
-    };
-  }
-  
-  // 通常の回答の場合
-  if (parsed.answer) {
-    logs.push({ type: 'info', message: '💭 Formulating response...' });
-    logs.push({ type: 'success', message: '✅ Response ready' });
-    if (logger) {
-      logger.logAssistantResponse(parsed.answer);
-    }
-    return {
-      response: parsed.answer,
-      logs
-    };
-  }
-  
-  // ツール呼び出しの場合
-  if (parsed.tool && tools[parsed.tool]) {
-    logs.push({ type: 'info', message: '🎯 Identified required action...' });
-    logs.push({ type: 'tool', message: `🔧 Selected tool: ${parsed.tool}` });
+  // タスクが完了するまでループ
+  while (iterations < MAX_ITERATIONS) {
+    iterations++;
+    logs.push({ type: 'info', message: `🧠 Processing step ${iterations}...` });
     
-    // ユーザー確認が必要な場合
-    if (!skipConfirmation) {
-      logs.push({ type: 'confirm', message: `⚠️ Tool execution requires confirmation: ${parsed.tool}` });
+    // プロンプトを構築
+    let currentPrompt = `${systemPrompt}\n\nUser: ${userInput}`;
+    
+    // 過去のツール実行結果を追加
+    if (context.toolExecutions.length > 0) {
+      currentPrompt += '\n\nPrevious tool executions:';
+      context.toolExecutions.forEach((exec, index) => {
+        currentPrompt += `\n${index + 1}. Tool: ${exec.tool}, Result: ${JSON.stringify(exec.result)}`;
+      });
+      currentPrompt += '\n\nBased on these results, what should we do next? Continue with the next step or provide a final answer.';
+    }
+    
+    // Ollamaに送信
+    let ollamaResponse: string;
+    try {
+      ollamaResponse = await callOllama(currentPrompt, logger);
+    } catch (error: any) {
+      logs.push({ type: 'error', message: `Ollama error: ${error.message}` });
       return {
-        response: `Tool execution request`,
-        logs,
-        requiresConfirmation: {
-          tool: parsed.tool,
-          args: parsed.args
-        }
+        response: `Failed to connect to Ollama: ${error.message}`,
+        logs
       };
     }
     
-    logs.push({ type: 'info', message: '🔄 Preparing tool execution...' });
-    logs.push({ type: 'exec', message: `⚡ Executing with args: ${JSON.stringify(parsed.args)}` });
+    logs.push({ type: 'info', message: '🔍 Parsing AI response...' });
     
-    try {
-      const toolResult = await tools[parsed.tool].execute(parsed.args);
-      logs.push({ type: 'success', message: '✅ Tool executed successfully' });
-      
+    const parsed = extractJson(ollamaResponse);
+    
+    if (!parsed) {
+      return {
+        response: "I'm sorry, I couldn't understand the response format.",
+        logs
+      };
+    }
+    
+    // 通常の回答の場合（タスク完了）
+    if (parsed.answer) {
+      logs.push({ type: 'info', message: '💭 Formulating response...' });
+      logs.push({ type: 'success', message: '✅ Task completed' });
       if (logger) {
-        logger.logToolExecution(parsed.tool, parsed.args, toolResult);
-      }
-      
-      logs.push({ type: 'info', message: '📊 Processing tool results...' });
-      logs.push({ type: 'info', message: '🤖 Generating final response...' });
-      
-      // ツール結果を含めて再度LLMに問い合わせ
-      const resultPrompt = `${systemPrompt}
-
-User: ${userInput}
-Tool ${parsed.tool} was executed with result: ${JSON.stringify(toolResult)}
-
-Please provide a final answer based on this result.`;
-      
-      let finalResponse: string;
-      try {
-        finalResponse = await callOllama(resultPrompt, logger);
-      } catch (error: any) {
-        logs.push({ type: 'error', message: `Ollama error on final response: ${error.message}` });
-        return {
-          response: `Tool executed but failed to get final response: ${error.message}`,
-          logs
-        };
-      }
-      
-      const finalParsed = extractJson(finalResponse);
-      
-      if (finalParsed && finalParsed.answer) {
-        if (logger) {
-          logger.logAssistantResponse(finalParsed.answer);
-        }
-        return {
-          response: finalParsed.answer,
-          logs
-        };
-      } else {
-        const fallbackResponse = `Tool executed successfully. Result: ${JSON.stringify(toolResult)}`;
-        if (logger) {
-          logger.logAssistantResponse(fallbackResponse);
-        }
-        return {
-          response: fallbackResponse,
-          logs
-        };
-      }
-    } catch (error) {
-      logs.push({ type: 'error', message: `❌ Tool execution failed: ${error}` });
-      if (logger) {
-        logger.logError(error);
+        logger.logAssistantResponse(parsed.answer);
       }
       return {
-        response: `Failed to execute tool: ${error}`,
+        response: parsed.answer,
+        logs
+      };
+    }
+    
+    // ツール呼び出しの場合
+    if (parsed.tool && tools[parsed.tool]) {
+      logs.push({ type: 'info', message: '🎯 Identified required action...' });
+      logs.push({ type: 'tool', message: `🔧 Selected tool: ${parsed.tool}` });
+      
+      // ユーザー確認が必要な場合（最初のツール実行時のみ）
+      if (!skipConfirmation && context.toolExecutions.length === 0) {
+        logs.push({ type: 'confirm', message: `⚠️ Tool execution requires confirmation: ${parsed.tool}` });
+        return {
+          response: `Tool execution request`,
+          logs,
+          requiresConfirmation: {
+            tool: parsed.tool,
+            args: parsed.args
+          }
+        };
+      }
+      
+      logs.push({ type: 'info', message: '🔄 Preparing tool execution...' });
+      logs.push({ type: 'exec', message: `⚡ Executing with args: ${JSON.stringify(parsed.args)}` });
+      
+      try {
+        const toolResult = await tools[parsed.tool].execute(parsed.args);
+        logs.push({ type: 'success', message: '✅ Tool executed successfully' });
+        
+        if (logger) {
+          logger.logToolExecution(parsed.tool, parsed.args, toolResult);
+        }
+        
+        // 実行結果をコンテキストに追加
+        context.toolExecutions.push({
+          tool: parsed.tool,
+          args: parsed.args,
+          result: toolResult
+        });
+        
+        logs.push({ type: 'info', message: '📊 Processing tool results...' });
+        
+        // 次のステップに続く
+        continue;
+      } catch (error) {
+        logs.push({ type: 'error', message: `❌ Tool execution failed: ${error}` });
+        if (logger) {
+          logger.logError(error);
+        }
+        return {
+          response: `Failed to execute tool: ${error}`,
+          logs
+        };
+      }
+    } else {
+      // ツールが見つからない、または不正な応答
+      return {
+        response: "I couldn't determine how to proceed with the task.",
         logs
       };
     }
   }
   
+  // 最大実行回数に達した場合
+  logs.push({ type: 'warning', message: '⚠️ Maximum iterations reached' });
   return {
-    response: "I couldn't determine how to help with that request.",
+    response: `Task execution stopped after ${MAX_ITERATIONS} steps. The task may be incomplete.`,
     logs
   };
 }
 
 // テスト用のメイン関数
 async function main() {
-  console.log('🐯 Tiger CLI Agent - Test Mode\n');
+  console.log('🐯 Tiger CLI Agent - Test Mode (v2)\n');
   
   const testCases = [
+    "Implement a Fibonacci calculator in Python",
     "List the files in the current directory",
-    "What's in the package.json file?",
-    "Show me the current date"
+    "What's in the package.json file?"
   ];
   
   for (const testCase of testCases) {
     console.log(`\n📝 User: ${testCase}`);
-    const result = await tigerChat(testCase);
+    const result = await tigerChat(testCase, undefined, true); // Skip confirmation for testing
     
     console.log('\n📊 Logs:');
     result.logs.forEach(log => {
