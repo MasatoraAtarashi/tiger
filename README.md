@@ -14,17 +14,19 @@ A powerful CLI coding agent powered by Ollama and Mastra tools. Tiger helps you 
 
 - Node.js 18+ 
 - [Ollama](https://ollama.ai/) installed and running
-- Gemma3:4b model (or modify the model in `src/tiger.ts`)
+- llama3.2:3b model (default) or any other Ollama model
 
 ```bash
 # Install Ollama (macOS/Linux)
 curl -fsSL https://ollama.ai/install.sh | sh
 
-# Pull the Gemma3:4b model
-ollama pull gemma3:4b
+# Pull the default model
+ollama pull llama3.2:3b
 ```
 
 ## Installation
+
+### Local Development
 
 ```bash
 # Clone the repository
@@ -36,6 +38,16 @@ npm install
 
 # Run Tiger CLI
 npm start
+```
+
+### Global Installation
+
+```bash
+# Install globally to use 'tiger' command anywhere
+npm install -g .
+
+# Now you can run Tiger from anywhere
+tiger
 ```
 
 ## Usage
@@ -62,6 +74,7 @@ Tiger understands natural language requests for:
 ### Keyboard Shortcuts
 
 - `Enter` - Send your message
+- `/quit` - Exit the application
 - `ESC` or `Ctrl+C` - Exit the application
 
 ## Development
@@ -93,10 +106,52 @@ tiger-cli/
 
 ## Configuration
 
-Tiger logs all sessions to help with debugging. Logs are stored in:
-- Default: `./logs/tiger-session-{timestamp}.log`
+Tiger can be configured using a `.tigerrc` file. The configuration is loaded in the following priority order:
 
-You can modify the log directory in `src/config.ts`.
+1. Environment variables (highest priority)
+2. `.tigerrc` or `.tigerrc.json` in current directory
+3. `.tigerrc` or `.tigerrc.json` in home directory
+4. `~/.tiger/config.json`
+5. Default configuration (lowest priority)
+
+### Configuration Options
+
+Create a `.tigerrc` file in your project or home directory:
+
+```json
+{
+  "model": "llama3.2:3b",      // Ollama model to use
+  "timeout": 60000,            // Timeout for Ollama calls (ms)
+  "maxIterations": 10,         // Max steps for multi-step tasks
+  "temperature": 0.7,          // Model temperature (0-1)
+  "logDir": "~/.tiger/logs",   // Log directory path
+  "logEnabled": true,          // Enable/disable logging
+  "logLevel": "info"           // Log level: info, debug, error
+}
+```
+
+### Environment Variables
+
+You can also use environment variables:
+
+```bash
+export TIGER_MODEL="llama3.2:7b"
+export TIGER_TIMEOUT=120000
+export TIGER_MAX_ITERATIONS=15
+export TIGER_TEMPERATURE=0.8
+```
+
+### Available Models
+
+Tiger works with any Ollama model. Popular options:
+- `llama3.2:3b` (default) - Fast, good for coding
+- `llama3.2:7b` - More capable
+- `qwen2.5-coder:7b` - Specialized for coding
+- `deepseek-coder-v2:16b` - Powerful coding model
+
+To use a different model:
+1. Pull it with Ollama: `ollama pull qwen2.5-coder:7b`
+2. Set it in `.tigerrc`: `{"model": "qwen2.5-coder:7b"}`
 
 ## Contributing
 

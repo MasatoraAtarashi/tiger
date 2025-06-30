@@ -1,0 +1,104 @@
+name: Integration Tests
+
+on:
+  push:
+    branches: [ main, develop, 'feature/**' ]
+  pull_request:
+    branches: [ main, develop ]
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    
+    strategy:
+      matrix:
+        os: [ubuntu-latest, macos-latest, windows-latest]
+        node-version: [18.x, 20.x]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js ${{ matrix.node-version }}
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ matrix.node-version }}
+        
+    - name: Cache dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.npm
+        key: ${{ runner.os }}-node-${{ matrix.node-version }}-${{ hashFiles('**/package-lock.json') }}
+        restore-keys: |
+          ${{ runner.os }}-node-${{ matrix.node-version }}-
+          ${{ runner.os }}-node-
+          
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Run type checking
+      run: npm run typecheck
+      
+    - name: Run integration tests
+      run: npm test
+      env:
+        TIGER_CLI_INTEGRATION_TEST: true
+        TIGER_NO_INTERACTIVE: true
+        
+    - name: Run integration tests with verbose output (on failure)
+      if: failure()
+      run: npm run test:verbose
+      env:
+        TIGER_CLI_INTEGRATION_TEST: true
+        TIGER_NO_INTERACTIVE: true
+        KEEP_OUTPUT: true
+        
+    - name: Upload test artifacts
+      if: failure()
+      uses: actions/upload-artifact@v3
+      with:
+        name: test-results-${{ matrix.os }}-node${{ matrix.node-version }}
+        path: |
+          integration-tests/test-runs/
+          integration-tests/test-results.json
+          
+  test-individual-tools:
+    runs-on: ubuntu-latest
+    needs: test
+    
+    strategy:
+      matrix:
+        tool: [file-system, shell, search, web, memory, planner, complete]
+        
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: 20.x
+        
+    - name: Install dependencies
+      run: npm ci
+      
+    - name: Build project
+      run: npm run build
+      
+    - name: Test ${{ matrix.tool }} tool
+      run: npm run test:${{ matrix.tool }}
+      env:
+        TIGER_CLI_INTEGRATION_TEST: true
+        TIGER_NO_INTERACTIVE: true
+        
+  all-tests-pass:
+    runs-on: ubuntu-latest
+    needs: [test, test-individual-tools]
+    
+    steps:
+    - name: All tests passed
+      run: echo "All integration tests passed successfully!"

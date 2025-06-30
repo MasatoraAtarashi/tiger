@@ -1,89 +1,108 @@
-import { exec } from 'child_process';
-import { promisify } from 'util';
 import { createToolRegistry } from './tools';
 import { Logger } from './logger';
+import { loadConfig } from './config';
+import { execSync } from 'child_process';
 
-const execAsync = promisify(exec);
+const availableTools = createToolRegistry();
 
-// Tiger用のシステムプロンプト
-const TIGER_SYSTEM_PROMPT = `You are Tiger, a powerful CLI coding agent that can help users with various tasks using available tools.
-
-Available tools:
-{{TOOLS}}
-
-When you need to use a tool, respond with a JSON object in this format:
-{
-  "tool": "tool_id",
-  "args": {
-    "param1": "value1"
-  }
-}
-
-When providing a final answer, respond with:
-{
-  "answer": "Your response to the user"
-}
-
-IMPORTANT: Always use tools when possible to provide accurate information. Be helpful and concise.`;
-
-// ツール定義をプロンプト用に変換
-function toolsToPrompt(tools: ReturnType<typeof createToolRegistry>): string {
-  const toolDescriptions = Object.entries(tools).map(([id, tool]) => {
-    const inputParams = Object.entries(tool.inputSchema.shape).map(([key, schema]: [string, any]) => {
-      return `  - ${key}: ${schema.description || 'string'}`;
-    }).join('\n');
-    
-    return `Tool: ${id}
-Description: ${tool.description}
-Parameters:
-${inputParams}`;
-  }).join('\n\n');
-  
-  return toolDescriptions;
-}
-
-// Ollamaにプロンプトを送信
-async function callOllama(prompt: string, logger?: Logger): Promise<string> {
-  const command = `echo '${prompt.replace(/'/g, "'\\''")}' | ollama run gemma3:4b`;
-  
-  if (logger) {
-    logger.log({
-      timestamp: new Date().toISOString(),
-      type: 'info',
-      message: 'Calling Ollama with prompt',
-      metadata: { promptLength: prompt.length }
-    });
-  }
+// Ollamaを呼び出す関数
+async function callOllama(prompt: string, logger?: Logger, model?: string): Promise<string> {
+  const config = loadConfig();
+  const modelName = model || config.model;
   
   try {
-    const { stdout, stderr } = await execAsync(command);
+    const command = `echo '${prompt.replace(/'/g, "'\\''")}' | ollama run ${modelName} 2>&1`;
     
     if (logger) {
       logger.log({
         timestamp: new Date().toISOString(),
-        type: 'info',
-        message: 'Ollama response received',
+        type: 'ollama_call',
+        message: `Calling Ollama with model ${modelName}`,
+        metadata: { promptLength: prompt.length, model: modelName }
+      });
+    }
+    
+    let stdout: string;
+    try {
+      stdout = execSync(command, { 
+        encoding: 'utf8',
+        maxBuffer: 10 * 1024 * 1024,
+        timeout: config.timeout
+      });
+      
+      // デバッグ用に生のレスポンスをログに記録
+      if (logger) {
+        logger.log({
+          timestamp: new Date().toISOString(),
+          type: 'debug',
+          message: 'Raw Ollama output',
+          metadata: { 
+            rawLength: stdout.length,
+            rawSample: stdout.substring(0, 200).replace(/[\x00-\x1F\x7F]/g, '?')
+          }
+        });
+      }
+    } catch (error: any) {
+      if (error.message.includes('ollama') || error.message.includes('not found') || error.code === 'ENOENT') {
+        throw new Error('Ollama is not running. Please start Ollama first with: ollama serve');
+      }
+      throw error;
+    }
+    
+    // ANSIエスケープシーケンスを除去
+    let cleanOutput = stdout
+                      // 全てのESC文字を除去
+                      .replace(/\x1b/g, '')
+                      .replace(/\u001b/g, '')
+                      // 残りのANSIエスケープシーケンスを除去
+                      .replace(/\[[0-9;]*[a-zA-Z]/g, '')
+                      .replace(/\[\?[0-9;]*[a-zA-Z]/g, '')
+                      .replace(/\[([0-9]+)([A-K])/g, '')
+                      // プログレスインジケーターを除去
+                      .replace(/⠋|⠙|⠹|⠸|⠼|⠴|⠦|⠧|⠇|⠏/g, '')
+                      .replace(/\r/g, '\n')
+                      // 制御文字の後に続く可視文字以外を除去
+                      .replace(/\?[0-9;]*[a-zA-Z]/g, '');
+    
+    // JSONオブジェクトを抽出する
+    const jsonMatch = cleanOutput.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/);
+    if (jsonMatch) {
+      cleanOutput = jsonMatch[0];
+    } else {
+      // 改行で分割してフィルタリング
+      cleanOutput = cleanOutput
+                    .split('\n')
+                    .filter(line => !line.includes('pulling') && 
+                                  !line.includes('verifying') &&
+                                  !line.includes('[K') &&
+                                  line.trim() !== '' &&
+                                  !line.match(/^\s*$/))
+                    .join('\n')
+                    .trim();
+    }
+    
+    if (logger) {
+      logger.log({
+        timestamp: new Date().toISOString(),
+        type: 'ollama_response',
+        message: 'Received Ollama response',
         metadata: { 
-          responseLength: stdout.length,
-          response: stdout.substring(0, 500) + (stdout.length > 500 ? '...' : ''),
-          stderr: stderr || null
+          originalLength: stdout.length,
+          cleanedLength: cleanOutput.length,
+          response: cleanOutput.substring(0, 500) + (cleanOutput.length > 500 ? '...' : ''),
+          firstLine: cleanOutput.split('\n')[0] || 'EMPTY'
         }
       });
     }
     
-    return stdout.trim();
+    return cleanOutput;
   } catch (error: any) {
     if (logger) {
       logger.log({
         timestamp: new Date().toISOString(),
         type: 'error',
         message: 'Ollama call failed',
-        metadata: { 
-          error: error.message,
-          command: command.substring(0, 200) + '...',
-          stderr: error.stderr,
-          stdout: error.stdout
-        }
+        metadata: { error: error.message }
       });
     }
     throw error;
@@ -93,162 +112,260 @@ async function callOllama(prompt: string, logger?: Logger): Promise<string> {
 // レスポンスからJSONを抽出
 function extractJson(response: string): any {
   try {
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+    // 全体をJSONとしてパース
+    const parsed = JSON.parse(response.trim());
+    if (typeof parsed === 'object' && parsed !== null) {
+      return parsed;
     }
-  } catch (error) {
-    console.error('Failed to parse JSON:', error);
+  } catch {}
+  
+  // コードブロック内のJSONを探す
+  const codeBlockMatch = response.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+  if (codeBlockMatch) {
+    try {
+      return JSON.parse(codeBlockMatch[1]);
+    } catch {}
   }
+  
+  // JSONオブジェクトを探す
+  const jsonMatch = response.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/);
+  if (jsonMatch) {
+    try {
+      return JSON.parse(jsonMatch[0]);
+    } catch {}
+  }
+  
   return null;
 }
 
-// Tiger CLIのメイン関数
-export async function tigerChat(userInput: string, logger?: Logger): Promise<{
-  response: string;
-  logs: Array<{ type: string; message: string }>;
-}> {
-  const logs: Array<{ type: string; message: string }> = [];
-  const tools = createToolRegistry();
-  
-  // システムプロンプトを生成
-  const systemPrompt = TIGER_SYSTEM_PROMPT.replace('{{TOOLS}}', toolsToPrompt(tools));
-  const fullPrompt = `${systemPrompt}\n\nUser: ${userInput}`;
-  
-  logs.push({ type: 'info', message: '🤔 Thinking...' });
+// ツールを実行する
+async function executeTool(toolName: string, args: any, logger?: Logger): Promise<any> {
+  const tool = availableTools[toolName];
+  if (!tool) {
+    throw new Error(`Tool "${toolName}" not found`);
+  }
   
   if (logger) {
-    logger.logUserInput(userInput);
+    logger.log({
+      timestamp: new Date().toISOString(),
+      type: 'tool_execution',
+      message: `Executing ${toolName}`,
+      metadata: { tool: toolName, args }
+    });
   }
   
-  // Ollamaに送信
-  let ollamaResponse: string;
-  try {
-    ollamaResponse = await callOllama(fullPrompt, logger);
-  } catch (error: any) {
-    logs.push({ type: 'error', message: `Ollama error: ${error.message}` });
-    return {
-      response: `Failed to connect to Ollama: ${error.message}`,
-      logs
-    };
+  const result = await tool.execute(args);
+  
+  if (logger) {
+    logger.log({
+      timestamp: new Date().toISOString(),
+      type: 'tool_result',
+      message: `${toolName} completed`,
+      metadata: { tool: toolName, success: true }
+    });
   }
   
-  const parsed = extractJson(ollamaResponse);
-  
-  if (!parsed) {
-    return {
-      response: "I'm sorry, I couldn't understand the response format.",
-      logs
-    };
-  }
-  
-  // 通常の回答の場合
-  if (parsed.answer) {
-    logs.push({ type: 'success', message: '✅ Response ready' });
-    if (logger) {
-      logger.logAssistantResponse(parsed.answer);
-    }
-    return {
-      response: parsed.answer,
-      logs
-    };
-  }
-  
-  // ツール呼び出しの場合
-  if (parsed.tool && tools[parsed.tool]) {
-    logs.push({ type: 'tool', message: `🔧 Selected tool: ${parsed.tool}` });
-    logs.push({ type: 'exec', message: `⚡ Executing with args: ${JSON.stringify(parsed.args)}` });
-    
-    try {
-      const toolResult = await tools[parsed.tool].execute(parsed.args);
-      logs.push({ type: 'success', message: '✅ Tool executed successfully' });
-      
-      if (logger) {
-        logger.logToolExecution(parsed.tool, parsed.args, toolResult);
-      }
-      
-      // ツール結果を含めて再度LLMに問い合わせ
-      const resultPrompt = `${systemPrompt}
+  return result;
+}
 
-User: ${userInput}
-Tool ${parsed.tool} was executed with result: ${JSON.stringify(toolResult)}
+interface ChatLog {
+  type: 'info' | 'tool' | 'exec' | 'success' | 'error' | 'confirm';
+  message: string;
+}
 
-Please provide a final answer based on this result.`;
-      
-      let finalResponse: string;
-      try {
-        finalResponse = await callOllama(resultPrompt, logger);
-      } catch (error: any) {
-        logs.push({ type: 'error', message: `Ollama error on final response: ${error.message}` });
-        return {
-          response: `Tool executed but failed to get final response: ${error.message}`,
-          logs
-        };
-      }
-      
-      const finalParsed = extractJson(finalResponse);
-      
-      if (finalParsed && finalParsed.answer) {
-        if (logger) {
-          logger.logAssistantResponse(finalParsed.answer);
-        }
-        return {
-          response: finalParsed.answer,
-          logs
-        };
-      } else {
-        const fallbackResponse = `Tool executed successfully. Result: ${JSON.stringify(toolResult)}`;
-        if (logger) {
-          logger.logAssistantResponse(fallbackResponse);
-        }
-        return {
-          response: fallbackResponse,
-          logs
-        };
-      }
-    } catch (error) {
-      logs.push({ type: 'error', message: `❌ Tool execution failed: ${error}` });
-      if (logger) {
-        logger.logError(error);
-      }
-      return {
-        response: `Failed to execute tool: ${error}`,
-        logs
-      };
-    }
-  }
-  
-  return {
-    response: "I couldn't determine how to help with that request.",
-    logs
+interface ChatResult {
+  response: string;
+  logs: ChatLog[];
+  requiresConfirmation?: {
+    tool: string;
+    args: any;
+  };
+  contextInfo?: {
+    tokensUsed: number;
+    promptLength: number;
   };
 }
 
-// テスト用のメイン関数
-async function main() {
-  console.log('🐯 Tiger CLI Agent - Test Mode\n');
-  
-  const testCases = [
-    "List the files in the current directory",
-    "What's in the package.json file?",
-    "Show me the current date"
-  ];
-  
-  for (const testCase of testCases) {
-    console.log(`\n📝 User: ${testCase}`);
-    const result = await tigerChat(testCase);
-    
-    console.log('\n📊 Logs:');
-    result.logs.forEach(log => {
-      console.log(`  ${log.message}`);
-    });
-    
-    console.log(`\n🐯 Tiger: ${result.response}`);
-    console.log('\n' + '='.repeat(80));
-  }
+// 実行履歴
+interface ExecutionStep {
+  tool: string;
+  args: any;
+  result: any;
 }
 
-// コマンドライン実行の場合
-if (require.main === module) {
-  main().catch(console.error);
+export async function tigerChat(
+  userInput: string, 
+  logger?: Logger,
+  skipConfirmation: boolean = false,
+  memory?: string
+): Promise<ChatResult> {
+  const config = loadConfig();
+  const logs: ChatLog[] = [];
+  const executionHistory: ExecutionStep[] = [];
+  const maxIterations = config.maxIterations;
+  
+  logs.push({ type: 'info', message: '🤔 Thinking...' });
+  
+  let totalPromptLength = 0;
+  
+  // 実行ループ
+  for (let iteration = 0; iteration < maxIterations; iteration++) {
+    let prompt = `You are Tiger, a helpful coding assistant powered by Ollama and Mastra tools.
+${memory ? `\nProject Context:\n${memory}\n` : ''}
+User request: ${userInput}
+
+${executionHistory.length > 0 ? `
+Previous actions taken:
+${executionHistory.map((exec, idx) => 
+  `${idx + 1}. ${exec.tool}(${JSON.stringify(exec.args)}) - Result: ${
+    exec.tool === 'write_file' ? 'File created successfully' :
+    exec.tool === 'read_file' ? `Read ${exec.result.content.length} characters` :
+    exec.tool === 'ls' ? `Found ${exec.result.files.length} files` :
+    exec.tool === 'shell' ? 'Command executed' :
+    'Completed'
+  }`
+).join('\n')}
+
+Based on what you've done so far, what should you do next to complete the user's request?
+` : ''}
+
+Analyze this request and decide what action to take.
+You MUST respond with ONLY ONE of these JSON formats:
+
+1. To use a tool:
+{"tool": "tool_name", "args": {"key": "value"}}
+
+2. When task is complete:
+{"response": "your final response here"}
+
+Remember: Output ONLY valid JSON, nothing else.
+
+Available tools:
+- ls: List directory contents. Example: {"tool": "ls", "args": {"path": "./"}}
+- read_file: Read a file content. Example: {"tool": "read_file", "args": {"path": "file.txt"}}
+- write_file: Write/create a file. Example: {"tool": "write_file", "args": {"path": "file.txt", "content": "file content here"}}
+- shell: Execute shell commands. Example: {"tool": "shell", "args": {"command": "echo hello"}}
+
+IMPORTANT: 
+1. Respond with ONLY JSON, nothing else.
+2. For programming tasks, break them into steps: create file, implement code, test it.
+3. Always complete the entire task before responding with a final message.
+4. When creating summaries or documents, include actual content, not just titles.
+5. Think step by step and ensure your outputs are complete and useful.`;
+    
+    totalPromptLength += prompt.length;
+    
+    let ollamaResponse: string;
+    try {
+      logs.push({ type: 'info', message: '🧠 Consulting with AI model...' });
+      ollamaResponse = await callOllama(prompt, logger);
+    } catch (error: any) {
+      logs.push({ type: 'error', message: `Ollama error: ${error.message}` });
+      return {
+        response: error.message.includes('Ollama is not running') 
+          ? error.message 
+          : `Failed to connect to Ollama: ${error.message}`,
+        logs
+      };
+    }
+    
+    logs.push({ type: 'info', message: '🔍 Parsing AI response...' });
+    const parsed = extractJson(ollamaResponse);
+    
+    // デバッグ: パース結果をログに記録
+    if (logger) {
+      logger.log({
+        timestamp: new Date().toISOString(),
+        type: 'debug',
+        message: 'JSON parse result',
+        metadata: { 
+          parsed: parsed,
+          ollamaResponse: ollamaResponse.substring(0, 200)
+        }
+      });
+    }
+    
+    if (!parsed) {
+      // JSONが抽出できない場合は、レスポンスをそのまま返す
+      return {
+        response: ollamaResponse || "I couldn't understand the response format. Please make sure Ollama is properly configured.",
+        logs
+      };
+    }
+    
+    // レスポンスの場合（タスク完了）
+    if (parsed.response) {
+      logs.push({ type: 'success', message: '✅ Task completed' });
+      return {
+        response: parsed.response,
+        logs,
+        contextInfo: {
+          tokensUsed: Math.floor(totalPromptLength / 4), // 簡易的なトークン推定
+          promptLength: totalPromptLength
+        }
+      };
+    }
+    
+    // ツールの実行
+    if (parsed.tool && parsed.args) {
+      logs.push({ type: 'info', message: '🎯 Identified required action...' });
+      logs.push({ type: 'tool', message: `🔧 Selected tool: ${parsed.tool}` });
+      
+      // 確認が必要な場合
+      if (!skipConfirmation && (parsed.tool === 'write_file' || parsed.tool === 'shell')) {
+        logs.push({ type: 'confirm', message: `⚠️ Tool execution requires confirmation: ${parsed.tool}` });
+        return {
+          response: 'Tool execution request',
+          logs,
+          requiresConfirmation: {
+            tool: parsed.tool,
+            args: parsed.args
+          }
+        };
+      }
+      
+      // ツールを実行
+      try {
+        logs.push({ type: 'exec', message: `🚀 Executing ${parsed.tool}...` });
+        const result = await executeTool(parsed.tool, parsed.args, logger);
+        logs.push({ type: 'success', message: `✅ ${parsed.tool} completed successfully` });
+        
+        // 実行履歴に追加
+        executionHistory.push({
+          tool: parsed.tool,
+          args: parsed.args,
+          result: result
+        });
+        
+        // 次のイテレーションに進む
+        continue;
+      } catch (error: any) {
+        logs.push({ type: 'error', message: `❌ Tool error: ${error.message}` });
+        return {
+          response: `Error executing ${parsed.tool}: ${error.message}`,
+          logs
+        };
+      }
+    }
+    
+    // ツールもレスポンスもない場合
+    logs.push({ type: 'error', message: 'Could not determine next action' });
+    return {
+      response: "I couldn't find the requested tool or understand the command.",
+      logs
+    };
+  }
+  
+  // 最大イテレーション数に達した
+  logs.push({ type: 'success', message: '✅ Task completed' });
+  return {
+    response: `Task completed. Performed ${executionHistory.length} actions: ${
+      executionHistory.map(e => e.tool).join(', ')
+    }`,
+    logs,
+    contextInfo: {
+      tokensUsed: Math.floor(totalPromptLength / 4), // 簡易的なトークン推定
+      promptLength: totalPromptLength
+    }
+  };
 }

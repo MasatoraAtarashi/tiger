@@ -12,6 +12,8 @@ build/
 !src/**/*.mjs
 !examples/**/*.js
 !examples/**/*.mjs
+!integration-tests/**/*.js
+!integration-tests/**/*.mjs
 
 # TypeScript
 *.tsbuildinfo
@@ -41,8 +43,10 @@ lerna-debug.log*
 # Testing
 coverage/
 .nyc_output/
+integration-tests/test-runs/
 
 # Misc
 .cache/
 .temp/
 tmp/
+.eslintcache

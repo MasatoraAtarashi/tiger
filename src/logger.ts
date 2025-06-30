@@ -4,7 +4,7 @@ import { loadConfig, ensureLogDirectory } from './config';
 
 export interface LogEntry {
   timestamp: string;
-  type: 'info' | 'tool' | 'exec' | 'error' | 'success' | 'user' | 'assistant';
+  type: 'info' | 'tool' | 'exec' | 'error' | 'success' | 'user' | 'assistant' | 'ollama_call' | 'ollama_response' | 'tool_execution' | 'tool_result' | 'debug' | 'confirm' | 'memory_loaded' | 'memory_import_error';
   message: string;
   metadata?: any;
 }
@@ -14,8 +14,8 @@ export class Logger {
   private sessionId: string;
   private config = loadConfig();
 
-  constructor() {
-    this.sessionId = new Date().toISOString().replace(/[:.]/g, '-');
+  constructor(sessionId?: string) {
+    this.sessionId = sessionId || new Date().toISOString().replace(/[:.]/g, '-');
     const logFileName = `tiger-session-${this.sessionId}.log`;
     this.logFilePath = path.join(this.config.logDir, logFileName);
     
@@ -54,7 +54,15 @@ export class Logger {
       error: '❌',
       success: '✅',
       user: '👤',
-      assistant: '🐯'
+      assistant: '🐯',
+      ollama_call: '🤖',
+      ollama_response: '💬',
+      tool_execution: '🔨',
+      tool_result: '📊',
+      debug: '🐛',
+      confirm: '⚠️',
+      memory_loaded: '📚',
+      memory_import_error: '📄'
     };
 
     const prefix = `[${entry.timestamp}] ${typeEmoji[entry.type] || '📝'} [${entry.type.toUpperCase()}]`;

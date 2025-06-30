@@ -4,16 +4,38 @@
   "description": "Tiger - A powerful CLI coding agent powered by Ollama",
   "main": "src/tiger.ts",
   "bin": {
-    "tiger": "./src/tiger-cli.mjs"
+    "tiger": "./dist/tiger-cli.js"
   },
   "scripts": {
     "start": "node src/tiger-cli.mjs",
+    "start:improved": "node src/tiger-cli-improved.mjs",
     "dev": "ts-node src/tiger.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "lint": "eslint src --ext .ts,.tsx,.js,.mjs --fix",
+    "lint:check": "eslint src --ext .ts,.tsx,.js,.mjs",
+    "test": "node integration-tests/run-tests.js",
+    "test:verbose": "node integration-tests/run-tests.js --verbose",
+    "test:keep-output": "node integration-tests/run-tests.js --keep-output",
+    "test:integration": "node integration-tests/run-tests.js",
+    "test:file-system": "node integration-tests/run-tests.js file-system",
+    "test:shell": "node integration-tests/run-tests.js shell",
+    "test:search": "node integration-tests/run-tests.js search",
+    "test:web": "node integration-tests/run-tests.js web-fetch",
+    "test:memory": "node integration-tests/run-tests.js memory",
+    "test:planner": "node integration-tests/run-tests.js task-planner",
+    "test:complete": "node integration-tests/run-tests.js complete",
+    "version": "git rev-parse --short HEAD > src/VERSION",
+    "precommit": "npm run version"
   },
-  "keywords": ["cli", "agent", "ollama", "ai", "coding", "assistant"],
+  "keywords": [
+    "cli",
+    "agent",
+    "ollama",
+    "ai",
+    "coding",
+    "assistant"
+  ],
   "author": "Your Name",
   "license": "MIT",
   "repository": {
@@ -24,13 +46,19 @@
     "@mastra/core": "^0.10.8",
     "@types/ink": "^0.5.2",
     "@types/node": "^24.0.7",
-    "@types/react": "^18.3.23",
+    "@types/react": "^19.0.0",
     "fast-glob": "^3.3.3",
     "ink": "^6.0.1",
+    "ink-select-input": "^6.2.0",
     "ink-spinner": "^5.0.0",
     "react": "^19.1.0",
     "ts-node": "^10.9.2",
     "typescript": "^5.8.3",
     "zod": "^3.25.67"
+  },
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^8.35.0",
+    "@typescript-eslint/parser": "^8.35.0",
+    "eslint": "^9.30.0"
   }
 }
