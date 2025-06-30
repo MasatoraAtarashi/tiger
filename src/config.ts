@@ -11,6 +11,7 @@ export interface TigerConfig {
   maxIterations: number;
   temperature?: number;
   systemPrompt?: string;
+  contextSize?: number;
 }
 
 const DEFAULT_CONFIG: TigerConfig = {
@@ -20,7 +21,20 @@ const DEFAULT_CONFIG: TigerConfig = {
   model: 'llama3.2:3b',
   timeout: 60000,
   maxIterations: 10,
-  temperature: 0.7
+  temperature: 0.7,
+  contextSize: 128000 // llama3.2のデフォルトコンテキストサイズ
+};
+
+// モデルごとのデフォルトコンテキストサイズ
+const MODEL_CONTEXT_SIZES: { [key: string]: number } = {
+  'llama3.2:3b': 128000,
+  'llama3.2:7b': 128000,
+  'llama3.2:1b': 128000,
+  'qwen2.5-coder:7b': 32768,
+  'deepseek-coder-v2:16b': 16384,
+  'codellama:7b': 16384,
+  'mistral:7b': 8192,
+  'gemma:7b': 8192
 };
 
 const CONFIG_FILE_PATH = path.join(os.homedir(), '.tiger', 'config.json');
@@ -66,7 +80,19 @@ export function loadConfig(): TigerConfig {
   }
   
   // デフォルト設定、ファイル設定、環境変数の順で優先度を付けてマージ
-  return { ...DEFAULT_CONFIG, ...fileConfig, ...envConfig };
+  const mergedConfig = { ...DEFAULT_CONFIG, ...fileConfig, ...envConfig };
+  
+  // コンテキストサイズが指定されていない場合、モデルに基づいて設定
+  if (!mergedConfig.contextSize && MODEL_CONTEXT_SIZES[mergedConfig.model]) {
+    mergedConfig.contextSize = MODEL_CONTEXT_SIZES[mergedConfig.model];
+  }
+  
+  return mergedConfig;
+}
+
+// モデルのコンテキストサイズを取得
+export function getContextSizeForModel(model: string): number {
+  return MODEL_CONTEXT_SIZES[model] || 8192; // デフォルトは8192
 }
 
 export function saveConfig(config: Partial<TigerConfig>): void {

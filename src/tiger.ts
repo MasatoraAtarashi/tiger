@@ -143,6 +143,10 @@ interface ChatResult {
     tool: string;
     args: any;
   };
+  contextInfo?: {
+    tokensUsed: number;
+    promptLength: number;
+  };
 }
 
 // 実行履歴
@@ -163,6 +167,8 @@ export async function tigerChat(
   const maxIterations = config.maxIterations;
   
   logs.push({ type: 'info', message: '🤔 Thinking...' });
+  
+  let totalPromptLength = 0;
   
   // 実行ループ
   for (let iteration = 0; iteration < maxIterations; iteration++) {
@@ -203,6 +209,8 @@ IMPORTANT:
 2. For programming tasks, break them into steps: create file, implement code, test it.
 3. Always complete the entire task before responding with a final message.`;
     
+    totalPromptLength += prompt.length;
+    
     let ollamaResponse: string;
     try {
       logs.push({ type: 'info', message: '🧠 Consulting with AI model...' });
@@ -233,7 +241,11 @@ IMPORTANT:
       logs.push({ type: 'success', message: '✅ Task completed' });
       return {
         response: parsed.response,
-        logs
+        logs,
+        contextInfo: {
+          tokensUsed: Math.floor(totalPromptLength / 4), // 簡易的なトークン推定
+          promptLength: totalPromptLength
+        }
       };
     }
     
@@ -293,6 +305,10 @@ IMPORTANT:
     response: `Task completed. Performed ${executionHistory.length} actions: ${
       executionHistory.map(e => e.tool).join(', ')
     }`,
-    logs
+    logs,
+    contextInfo: {
+      tokensUsed: Math.floor(totalPromptLength / 4), // 簡易的なトークン推定
+      promptLength: totalPromptLength
+    }
   };
 }

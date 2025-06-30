@@ -5,6 +5,7 @@ import { render, Text, Box, useInput, useApp } from 'ink';
 import Spinner from 'ink-spinner';
 import { spawn } from 'child_process';
 import { SimpleLogger } from './simple-logger.mjs';
+import { loadConfig } from './config.js';
 
 // ロガーインスタンスを作成
 const logger = new SimpleLogger();
@@ -123,11 +124,23 @@ const TigerCLI = () => {
   const [currentLogPath, setCurrentLogPath] = useState(null);
   const [pendingConfirmation, setPendingConfirmation] = useState(null);
   const [selectedOption, setSelectedOption] = useState(0);
+  const [config, setConfig] = useState(null);
+  const [contextUsage, setContextUsage] = useState({ used: 0, total: 128000 }); // デフォルト値
   const { exit } = useApp();
   
   // ロガーの初期化とロゴ表示
   useEffect(() => {
     setCurrentLogPath(logger.getLogFilePath());
+    
+    // 設定を読み込む
+    const loadedConfig = loadConfig();
+    setConfig(loadedConfig);
+    
+    // コンテキストサイズを設定
+    if (loadedConfig && loadedConfig.contextSize) {
+      setContextUsage(prev => ({ ...prev, total: loadedConfig.contextSize }));
+    }
+    
     // VERSIONファイルからコミットハッシュを取得
     const getCommitHash = () => {
       try {
@@ -163,6 +176,12 @@ const TigerCLI = () => {
   const processUserInput = async (userInput, skipConfirmation = false) => {
     setIsProcessing(true);
     setToolLogs([]);
+    
+    // コンテキスト使用量を計算（簡易的な推定）
+    const messageCount = messages.length;
+    const avgCharsPerMessage = 100;
+    const estimatedTokens = Math.floor((messageCount * avgCharsPerMessage + userInput.length) / 4);
+    setContextUsage(prev => ({ ...prev, used: estimatedTokens }));
     
     try {
       const result = await runTigerChat(userInput, skipConfirmation);
@@ -200,6 +219,14 @@ const TigerCLI = () => {
       }]);
       // アシスタントの応答をログに記録
       logger.log('assistant', result.response);
+      
+      // コンテキスト使用量を更新
+      if (result.contextInfo) {
+        setContextUsage(prev => ({ 
+          ...prev, 
+          used: Math.min(prev.used + result.contextInfo.tokensUsed, prev.total)
+        }));
+      }
     } catch (error) {
       setMessages(prev => [...prev, { 
         role: 'assistant', 
@@ -379,6 +406,24 @@ const TigerCLI = () => {
       ),
       React.createElement(Box, { justifyContent: 'center' },
         React.createElement(Text, { color: 'gray' }, 'Powered by Ollama + Mastra')
+      ),
+      // モデルとコンテキスト情報
+      React.createElement(Box, { justifyContent: 'space-between', marginTop: 1 },
+        React.createElement(Text, { color: 'cyan' }, 
+          `Model: ${config ? config.model : 'loading...'}`
+        ),
+        React.createElement(Box, {},
+          React.createElement(Text, { color: 'gray' }, 'Context: '),
+          React.createElement(Text, { 
+            color: contextUsage.used / contextUsage.total > 0.8 ? 'red' : 
+                   contextUsage.used / contextUsage.total > 0.6 ? 'yellow' : 'green' 
+          }, 
+            `${contextUsage.used.toLocaleString()}/${contextUsage.total.toLocaleString()} `
+          ),
+          React.createElement(Text, { color: 'gray' }, 
+            `(${Math.round(contextUsage.used / contextUsage.total * 100)}%)`
+          )
+        )
       )
     ),
     
