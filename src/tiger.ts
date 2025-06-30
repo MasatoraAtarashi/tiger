@@ -97,9 +97,18 @@ async function callOllama(prompt: string, logger?: Logger): Promise<string> {
 // レスポンスからJSONを抽出
 function extractJson(response: string): any {
   try {
-    const jsonMatch = response.match(/\{[\s\S]*\}/);
-    if (jsonMatch) {
-      return JSON.parse(jsonMatch[0]);
+    // コードブロック内のJSONを探す（```json ... ```）
+    const codeBlockMatch = response.match(/```json\s*(\{[\s\S]*?\})\s*```/);
+    if (codeBlockMatch) {
+      return JSON.parse(codeBlockMatch[1]);
+    }
+    
+    // 最後に現れるJSON形式のオブジェクトを探す（複数のJSONがある場合）
+    const jsonMatches = response.match(/\{[^{}]*(?:\{[^{}]*\}[^{}]*)*\}/g);
+    if (jsonMatches && jsonMatches.length > 0) {
+      // 最後のJSONオブジェクトを使用（通常、これがツール呼び出しまたは最終回答）
+      const lastJson = jsonMatches[jsonMatches.length - 1];
+      return JSON.parse(lastJson);
     }
   } catch (error) {
     console.error('Failed to parse JSON:', error);
